@@ -1,9 +1,17 @@
 import type { Artikel } from './fetcher'
 
+interface Voorkeuren {
+  stijl: 'kort' | 'uitgebreid'
+  regio: string[]
+  extraOnderwerpen: string
+  alleenHogeImpact: boolean
+}
+
 interface Profiel {
   naam: string
   vakgebied: string
   organisatie: string
+  voorkeuren?: Voorkeuren
 }
 
 export async function genereerNieuwsbrief(
@@ -65,6 +73,10 @@ FORMAAT: Retourneer een JSON-object met:
         content: `Ontvanger: ${profiel.naam}
 Vakgebied: ${profiel.vakgebied}
 Organisatie: ${orgLabel[profiel.organisatie] ?? profiel.organisatie}
+${profiel.voorkeuren ? `Schrijfstijl: ${profiel.voorkeuren.stijl === 'kort' ? 'kort en bondig, max 3 zinnen per item' : 'uitgebreid met context en achtergrond'}
+Regio focus: ${profiel.voorkeuren.regio.join(', ')}
+Extra onderwerpen om op te letten: ${profiel.voorkeuren.extraOnderwerpen || 'geen'}
+Alleen hoge impact: ${profiel.voorkeuren.alleenHogeImpact ? 'ja, filter laag en gemiddeld weg' : 'nee, alle relevante updates'}` : ''}
 
 Hieronder de publicaties van deze week. Selecteer wat relevant is en schrijf de nieuwsbrief.
 

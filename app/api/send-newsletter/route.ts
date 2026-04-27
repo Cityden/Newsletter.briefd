@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
   // ── Subscribers ophalen ────────────────────────────────────────────────
   const { data: abonnees, error: dbFout } = await supabase
     .from('subscribers')
-    .select('id, naam, email, vakgebied, organisatie, frequentie, bronnen, token')
+    .select('id, naam, email, vakgebied, organisatie, frequentie, bronnen, token, voorkeuren')
     .eq('actief', true)
 
   if (dbFout || !abonnees) {
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
       const beheerUrl = `${baseUrl}/voorkeuren?token=${abonnee.token}`
       const resultaat = await genereerNieuwsbrief(
         artikelen,
-        { naam: abonnee.naam, vakgebied: abonnee.vakgebied, organisatie: abonnee.organisatie },
+        { naam: abonnee.naam, vakgebied: abonnee.vakgebied, organisatie: abonnee.organisatie, voorkeuren: abonnee.voorkeuren ?? undefined },
         beheerUrl
       )
 
