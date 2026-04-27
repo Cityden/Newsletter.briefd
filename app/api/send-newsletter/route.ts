@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { fetchArtikelen } from '@/lib/fetcher'
 import { genereerNieuwsbrief } from '@/lib/generator'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY!)
 
 // Stuur naar alle wekelijkse abonnees, en op de eerste maandag van de maand
 // ook naar maandelijkse abonnees.
@@ -14,10 +14,14 @@ function isEersteMaandagVanMaand(): boolean {
 }
 
 export async function GET(req: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    return NextResponse.json({ error: 'CRON_SECRET niet ingesteld' }, { status: 500 })
+  }
+
   // Vercel Cron stuurt Authorization: Bearer <CRON_SECRET>
   const authHeader = req.headers.get('authorization')
-  const verwacht = `Bearer ${process.env.CRON_SECRET}`
-  if (authHeader !== verwacht) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
