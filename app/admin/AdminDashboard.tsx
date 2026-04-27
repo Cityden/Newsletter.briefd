@@ -51,7 +51,6 @@ export default function AdminDashboard() {
     if (res.ok && body.ok) {
       setSendStatus(s => ({ ...s, [email]: 'succes' }))
       setSendDetail(s => ({ ...s, [email]: body.onderwerp }))
-      // Refresh lijst voor bijgewerkte laatste_mail_op
       setTimeout(() => {
         fetch('/api/admin/subscribers').then(r => r.json()).then(setSubscribers)
       }, 1000)
@@ -78,128 +77,141 @@ export default function AdminDashboard() {
   const inactief = subscribers.filter(s => !s.actief)
 
   return (
-    <div style={s.pagina}>
-      {/* Header */}
-      <div style={s.header}>
-        <div>
-          <div style={s.label}>Regelgeving nieuwsbrief</div>
-          <h1 style={s.h1}>Admin dashboard</h1>
-        </div>
-        <button style={s.uitlogBtn} onClick={uitloggen}>Uitloggen</button>
-      </div>
+    <div style={{ minHeight: '100vh', background: '#0a0a0a', padding: '0 0 60px', fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');`}</style>
 
-      {/* Stats */}
-      <div style={s.statsRij}>
-        {[
-          { getal: subscribers.length, tekst: 'Totaal aangemeld' },
-          { getal: actief.length, tekst: 'Actief' },
-          { getal: inactief.length, tekst: 'Uitgeschreven' },
-          { getal: actief.filter(s => s.frequentie === 'wekelijks').length, tekst: 'Wekelijks' },
-          { getal: actief.filter(s => s.frequentie === 'maandelijks').length, tekst: 'Maandelijks' },
-        ].map(({ getal, tekst }) => (
-          <div key={tekst} style={s.statCard}>
-            <div style={s.statGetal}>{getal}</div>
-            <div style={s.statTekst}>{tekst}</div>
+      {/* Nav */}
+      <nav style={{ borderBottom: '1px solid #1a1a1a', padding: '0 2rem', marginBottom: 40 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: "'DM Serif Display'", fontSize: 18, color: '#e8e8e6', letterSpacing: '-.2px' }}>◈ Briefd</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span style={{ fontSize: 11, color: '#333', fontWeight: 500 }}>Admin dashboard</span>
+            <button
+              style={{ background: 'transparent', border: '1px solid #1e1e1e', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', color: '#555', fontFamily: 'inherit', transition: 'border-color .15s' }}
+              onClick={uitloggen}
+            >
+              Uitloggen
+            </button>
           </div>
-        ))}
-      </div>
+        </div>
+      </nav>
 
-      {/* Tabel */}
-      <div style={s.card}>
-        <div style={s.cardHeader}>
-          <h2 style={s.h2}>Subscribers</h2>
-          {laden && <span style={s.laadTekst}>Laden…</span>}
-          {fout && <span style={{ color: '#A32D2D', fontSize: 13 }}>{fout}</span>}
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2rem' }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>Beheer</div>
+          <div style={{ fontFamily: "'DM Serif Display'", fontSize: 28, fontWeight: 400, color: '#f0f0ee', letterSpacing: '-.3px' }}>Subscribers</div>
         </div>
 
-        <div style={s.tabelWrapper}>
-          <table style={s.tabel}>
-            <thead>
-              <tr>
-                {['Naam', 'E-mail', 'Vakgebied', 'Frequentie', 'Aangemeld', 'Laatste mail', 'Status', 'Actie'].map(kol => (
-                  <th key={kol} style={s.th}>{kol}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {subscribers.map(sub => {
-                const status = sendStatus[sub.email] ?? 'idle'
-                return (
-                  <tr key={sub.id} style={{ opacity: sub.actief ? 1 : 0.5 }}>
-                    <td style={s.td}><strong>{sub.naam}</strong></td>
-                    <td style={{ ...s.td, color: '#666', fontSize: 13 }}>{sub.email}</td>
-                    <td style={s.td}>{sub.vakgebied}</td>
-                    <td style={s.td}>
-                      <span style={{ ...s.badge, background: sub.frequentie === 'wekelijks' ? '#EEEDFE' : '#EAF3DE', color: sub.frequentie === 'wekelijks' ? '#3C3489' : '#27500A' }}>
-                        {sub.frequentie}
-                      </span>
-                    </td>
-                    <td style={{ ...s.td, color: '#888', fontSize: 13 }}>{formatDatum(sub.aangemeld_op)}</td>
-                    <td style={{ ...s.td, color: '#888', fontSize: 13 }}>{formatDatum(sub.laatste_mail_op)}</td>
-                    <td style={s.td}>
-                      <span style={{ ...s.badge, background: sub.actief ? '#EAF3DE' : '#f5f5f5', color: sub.actief ? '#27500A' : '#999' }}>
-                        {sub.actief ? 'Actief' : 'Uitgeschreven'}
-                      </span>
-                    </td>
-                    <td style={s.td}>
-                      {sub.actief && (
-                        <div>
-                          <button
-                            style={{ ...s.sendBtn, opacity: status === 'laden' ? 0.5 : 1 }}
-                            onClick={() => verstuurNieuwsbrief(sub.email)}
-                            disabled={status === 'laden'}
-                            title={sendDetail[sub.email]}
-                          >
-                            {status === 'laden' ? 'Bezig…'
-                              : status === 'succes' ? '✓ Verstuurd'
-                              : status === 'geen-updates' ? '— Geen updates'
-                              : status === 'fout' ? '✗ Fout'
-                              : 'Verstuur'}
-                          </button>
-                          {sendDetail[sub.email] && (
-                            <div style={{ fontSize: 11, color: status === 'fout' ? '#A32D2D' : '#888', marginTop: 4, maxWidth: 180 }}>
-                              {sendDetail[sub.email]}
-                            </div>
-                          )}
-                        </div>
-                      )}
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 32 }}>
+          {[
+            { getal: subscribers.length, tekst: 'Totaal aangemeld' },
+            { getal: actief.length, tekst: 'Actief' },
+            { getal: inactief.length, tekst: 'Uitgeschreven' },
+            { getal: actief.filter(s => s.frequentie === 'wekelijks').length, tekst: 'Wekelijks' },
+            { getal: actief.filter(s => s.frequentie === 'maandelijks').length, tekst: 'Maandelijks' },
+          ].map(({ getal, tekst }) => (
+            <div key={tekst} style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 12, padding: '16px 20px' }}>
+              <div style={{ fontFamily: "'DM Serif Display'", fontSize: 28, color: '#4ade80', lineHeight: 1, marginBottom: 6 }}>{laden ? '—' : getal}</div>
+              <div style={{ fontSize: 11, color: '#333', fontWeight: 500 }}>{tekst}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabel */}
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid #1a1a1a' }}>
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: '#d8d8d6', margin: 0 }}>Alle subscribers</h2>
+            {laden && <span style={{ fontSize: 12, color: '#333' }}>Laden…</span>}
+            {fout && <span style={{ fontSize: 12, color: '#f87171' }}>{fout}</span>}
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr>
+                  {['Naam', 'E-mail', 'Vakgebied', 'Frequentie', 'Aangemeld', 'Laatste mail', 'Status', 'Actie'].map(kol => (
+                    <th key={kol} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: '#333', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid #1a1a1a', whiteSpace: 'nowrap' }}>
+                      {kol}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {subscribers.map(sub => {
+                  const status = sendStatus[sub.email] ?? 'idle'
+                  return (
+                    <tr key={sub.id} style={{ opacity: sub.actief ? 1 : 0.4 }}>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#d8d8d6', fontWeight: 600 }}>{sub.naam}</td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#444', fontSize: 12 }}>{sub.email}</td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#888' }}>{sub.vakgebied}</td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
+                        <span style={{
+                          display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
+                          background: sub.frequentie === 'wekelijks' ? 'rgba(74,222,128,.08)' : 'rgba(255,255,255,.04)',
+                          border: sub.frequentie === 'wekelijks' ? '1px solid rgba(74,222,128,.2)' : '1px solid #222',
+                          color: sub.frequentie === 'wekelijks' ? '#4ade80' : '#555',
+                        }}>
+                          {sub.frequentie}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#333', fontSize: 12 }}>{formatDatum(sub.aangemeld_op)}</td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#333', fontSize: 12 }}>{formatDatum(sub.laatste_mail_op)}</td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
+                        <span style={{
+                          display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
+                          background: sub.actief ? 'rgba(74,222,128,.08)' : 'rgba(255,255,255,.03)',
+                          border: sub.actief ? '1px solid rgba(74,222,128,.2)' : '1px solid #1e1e1e',
+                          color: sub.actief ? '#4ade80' : '#333',
+                        }}>
+                          {sub.actief ? 'Actief' : 'Uitgeschreven'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
+                        {sub.actief && (
+                          <div>
+                            <button
+                              style={{
+                                fontSize: 11, fontWeight: 700, padding: '6px 14px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
+                                opacity: status === 'laden' ? 0.5 : 1,
+                                background: status === 'succes' ? 'rgba(74,222,128,.1)' : status === 'fout' ? 'rgba(248,113,113,.1)' : status === 'geen-updates' ? '#181818' : '#4ade80',
+                                color: status === 'succes' ? '#4ade80' : status === 'fout' ? '#f87171' : status === 'geen-updates' ? '#444' : '#0a0a0a',
+                                border: status === 'succes' ? '1px solid rgba(74,222,128,.2)' : status === 'fout' ? '1px solid rgba(248,113,113,.2)' : status === 'geen-updates' ? '1px solid #222' : '1px solid transparent',
+                              } as React.CSSProperties}
+                              onClick={() => verstuurNieuwsbrief(sub.email)}
+                              disabled={status === 'laden'}
+                            >
+                              {status === 'laden' ? 'Bezig…'
+                                : status === 'succes' ? '✓ Verstuurd'
+                                : status === 'geen-updates' ? '— Geen updates'
+                                : status === 'fout' ? '✗ Fout'
+                                : 'Verstuur'}
+                            </button>
+                            {sendDetail[sub.email] && (
+                              <div style={{ fontSize: 11, color: status === 'fout' ? '#f87171' : '#333', marginTop: 4, maxWidth: 180 }}>
+                                {sendDetail[sub.email]}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+                {!laden && subscribers.length === 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: '#2a2a2a', fontSize: 13 }}>
+                      Nog geen subscribers aangemeld.
                     </td>
                   </tr>
-                )
-              })}
-              {!laden && subscribers.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ ...s.td, textAlign: 'center', color: '#aaa', padding: '2rem' }}>
-                    Nog geen subscribers aangemeld.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   )
-}
-
-const s: Record<string, React.CSSProperties> = {
-  pagina: { minHeight: '100vh', background: '#f7f7f5', padding: '2rem', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', maxWidth: 1100, margin: '0 auto 1.5rem' },
-  label: { fontSize: 12, fontWeight: 500, color: '#534AB7', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 },
-  h1: { fontSize: 22, fontWeight: 700, color: '#1a1a1a', margin: 0 },
-  h2: { fontSize: 16, fontWeight: 600, color: '#1a1a1a', margin: 0 },
-  uitlogBtn: { background: 'none', border: '1px solid #e0e0e0', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', color: '#555', fontFamily: 'inherit' },
-  statsRij: { display: 'flex', gap: 12, marginBottom: '1.5rem', maxWidth: 1100, margin: '0 auto 1.5rem', flexWrap: 'wrap' as const },
-  statCard: { background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: '1rem 1.5rem', flex: '1 1 140px' },
-  statGetal: { fontSize: 28, fontWeight: 700, color: '#534AB7', lineHeight: 1 },
-  statTekst: { fontSize: 12, color: '#888', marginTop: 4 },
-  card: { background: '#fff', border: '1px solid #eee', borderRadius: 16, maxWidth: 1100, margin: '0 auto' },
-  cardHeader: { display: 'flex', alignItems: 'center', gap: 12, padding: '1.25rem 1.5rem', borderBottom: '1px solid #f0f0f0' },
-  laadTekst: { fontSize: 13, color: '#aaa' },
-  tabelWrapper: { overflowX: 'auto' as const },
-  tabel: { width: '100%', borderCollapse: 'collapse' as const, fontSize: 14 },
-  th: { textAlign: 'left' as const, padding: '10px 16px', fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase' as const, letterSpacing: '0.05em', borderBottom: '1px solid #f0f0f0', whiteSpace: 'nowrap' as const },
-  td: { padding: '12px 16px', borderBottom: '1px solid #f7f7f5', verticalAlign: 'top' as const, color: '#333' },
-  badge: { display: 'inline-block', fontSize: 11, fontWeight: 500, padding: '2px 10px', borderRadius: 20 },
-  sendBtn: { fontSize: 12, fontWeight: 500, padding: '6px 14px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' as const, fontFamily: 'inherit' },
 }

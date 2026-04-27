@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function AdminLoginPage() {
   const [wachtwoord, setWachtwoord] = useState('')
@@ -25,16 +26,28 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main style={s.page}>
-      <div style={s.card}>
-        <div style={s.label}>Regelgeving nieuwsbrief</div>
-        <h1 style={s.h1}>Admin</h1>
-        <p style={s.sub}>Voer het beheerderswachtwoord in om verder te gaan.</p>
+    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');`}</style>
 
-        <div style={s.field}>
-          <label style={s.fieldLabel}>Wachtwoord</label>
+      {/* Nav */}
+      <nav style={{ width: '100%', borderBottom: '1px solid #1a1a1a', padding: '0 2rem', marginBottom: 64 }}>
+        <div style={{ maxWidth: 420, margin: '0 auto', height: 56, display: 'flex', alignItems: 'center' }}>
+          <Link href="/" style={{ fontFamily: "'DM Serif Display'", fontSize: 18, color: '#e8e8e6', textDecoration: 'none', letterSpacing: '-.2px' }}>
+            ◈ Briefd
+          </Link>
+        </div>
+      </nav>
+
+      {/* Card */}
+      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 16, padding: '36px 40px', maxWidth: 420, width: 'calc(100% - 2rem)', boxShadow: '0 24px 48px rgba(0,0,0,.4)' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 10 }}>Beheer</div>
+        <h1 style={{ fontFamily: "'DM Serif Display'", fontSize: 26, fontWeight: 400, color: '#f0f0ee', margin: '0 0 8px', letterSpacing: '-.3px' }}>Admin</h1>
+        <p style={{ fontSize: 14, color: '#555', lineHeight: 1.65, margin: '0 0 28px' }}>Voer het beheerderswachtwoord in om verder te gaan.</p>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#666', marginBottom: 7 }}>Wachtwoord</label>
           <input
-            style={s.input}
+            style={{ width: '100%', padding: '10px 12px', fontSize: 14, border: '1px solid #1e1e1e', borderRadius: 8, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#0e0e0e', color: '#e8e8e6' }}
             type="password"
             placeholder="••••••••"
             value={wachtwoord}
@@ -45,30 +58,17 @@ export default function AdminLoginPage() {
         </div>
 
         {status === 'fout' && (
-          <div style={s.fout}>Ongeldig wachtwoord. Probeer opnieuw.</div>
+          <div style={{ marginBottom: 14, fontSize: 13, color: '#f87171' }}>Ongeldig wachtwoord. Probeer opnieuw.</div>
         )}
 
         <button
-          style={{ ...s.cta, opacity: (!wachtwoord || status === 'laden') ? 0.5 : 1 }}
+          style={{ width: '100%', padding: 13, background: '#4ade80', color: '#0a0a0a', border: 'none', borderRadius: 9, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (!wachtwoord || status === 'laden') ? 0.4 : 1, letterSpacing: '-.01em' }}
           onClick={login}
           disabled={!wachtwoord || status === 'laden'}
         >
-          {status === 'laden' ? 'Inloggen…' : 'Inloggen'}
+          {status === 'laden' ? 'Inloggen…' : 'Inloggen →'}
         </button>
       </div>
-    </main>
+    </div>
   )
-}
-
-const s: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100vh', background: '#f7f7f5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' },
-  card: { background: '#fff', borderRadius: 16, border: '1px solid #eee', padding: '2.5rem', maxWidth: 400, width: '100%' },
-  label: { fontSize: 12, fontWeight: 500, color: '#534AB7', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 },
-  h1: { fontSize: 22, fontWeight: 700, color: '#1a1a1a', margin: '0 0 6px' },
-  sub: { fontSize: 14, color: '#777', lineHeight: 1.6, margin: '0 0 24px' },
-  field: { marginBottom: 16 },
-  fieldLabel: { display: 'block', fontSize: 12, fontWeight: 500, color: '#555', marginBottom: 6 },
-  input: { width: '100%', padding: '10px 12px', fontSize: 14, border: '1px solid #e0e0e0', borderRadius: 8, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' },
-  fout: { marginBottom: 12, fontSize: 13, color: '#A32D2D' },
-  cta: { width: '100%', padding: 12, background: '#534AB7', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
 }
