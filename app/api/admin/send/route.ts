@@ -57,7 +57,10 @@ export async function POST(req: NextRequest) {
   }
 
   const dagenTerug = abonnee.frequentie === 'maandelijks' ? 31 : 30
+  console.log(`[admin/send] Ophalen artikelen van ${bronnen.length} bron(nen), dagenTerug=${dagenTerug}`)
+  console.log(`[admin/send] Bronnen:`, JSON.stringify(bronnen))
   const artikelen = await fetchArtikelen(bronnen, dagenTerug)
+  console.log(`[admin/send] Artikelen gevonden: ${artikelen.length}`)
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
   const emailDomein = process.env.EMAIL_DOMEIN ?? 'resend.dev'
@@ -73,8 +76,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: false,
       reden: artikelen.length === 0
-        ? 'Geen artikelen gevonden in de RSS-feeds'
+        ? `Geen artikelen gevonden in de RSS-feeds (bronnen: ${bronnen.map(b => b.naam).join(', ')})`
         : 'Geen relevante updates voor dit vakgebied',
+      debug: { aantalBronnen: bronnen.length, aantalArtikelen: artikelen.length, bronUrls: bronnen.map(b => b.url) },
     })
   }
 

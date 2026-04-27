@@ -50,17 +50,23 @@ async function fetchFeed(url: string, bronnaam: string): Promise<Artikel[]> {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Briefd-Nieuwsbrief/1.0 (+https://briefd.nl)' },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(10000),
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.error(`[fetchFeed] ${bronnaam} HTTP ${res.status} voor ${url}`)
+      return []
+    }
 
     const xml = await res.text()
+    console.log(`[fetchFeed] ${bronnaam} XML-lengte: ${xml.length} bytes`)
 
     // Detecteer Atom vs RSS
     const isAtom = xml.includes('<feed') && xml.includes('xmlns="http://www.w3.org/2005/Atom"')
     const artikelen = isAtom ? parseAtom(xml, bronnaam) : parseRSS(xml, bronnaam)
+    console.log(`[fetchFeed] ${bronnaam} geparseerd: ${artikelen.length} artikelen`)
     return artikelen
-  } catch {
+  } catch (err) {
+    console.error(`[fetchFeed] ${bronnaam} fout bij ophalen ${url}:`, err)
     return []
   }
 }
@@ -85,10 +91,13 @@ export async function fetchArtikelen(
   const alle = results
     .filter((r): r is PromiseFulfilledResult<Artikel[]> => r.status === 'fulfilled')
     .flatMap(r => r.value)
-    .filter(a => isRecent(a.gepubliceerdOp, dagenTerug))
+
+  console.log(`[fetchArtikelen] Totaal voor datumfilter: ${alle.length}, dagenTerug: ${dagenTerug}`)
+  const recent = alle.filter(a => isRecent(a.gepubliceerdOp, dagenTerug))
+  console.log(`[fetchArtikelen] Na datumfilter: ${recent.length}`)
 
   const gezien = new Set<string>()
-  return alle.filter(a => {
+  return recent.filter(a => {
     if (gezien.has(a.url)) return false
     gezien.add(a.url)
     return true
