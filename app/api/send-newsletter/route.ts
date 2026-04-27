@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Database fout' }, { status: 500 })
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? ''
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
   const emailDomein = process.env.EMAIL_DOMEIN ?? 'resend.dev'
   const verzonden: string[] = []
   const overgeslagen: string[] = []

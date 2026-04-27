@@ -106,6 +106,15 @@ ${artikelTekst}`
   return { onderwerp: parsed.onderwerp, html }
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 function impactKleur(impact: string) {
   if (impact === 'hoog') return { bg: '#FCEBEB', kleur: '#791F1F', label: 'Hoge impact' }
   if (impact === 'gemiddeld') return { bg: '#FAEEDA', kleur: '#633806', label: 'Gemiddelde impact' }
@@ -181,7 +190,7 @@ function buildHTML(
     <!-- Header -->
     <div style="margin-bottom:24px">
       <div style="font-size:13px;font-weight:500;color:#534AB7;margin-bottom:4px">Regelgeving nieuwsbrief</div>
-      <div style="font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:4px">${profiel.vakgebied}</div>
+      <div style="font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:4px">${escapeHtml(profiel.vakgebied)}</div>
       <div style="font-size:13px;color:#aaa">${datum} · ${data.items.length} update${data.items.length !== 1 ? 's' : ''} deze week</div>
     </div>
 
@@ -194,7 +203,7 @@ function buildHTML(
         Voorkeuren wijzigen
       </a>
       <div style="font-size:12px;color:#aaa;line-height:1.6">
-        Je ontvangt deze nieuwsbrief omdat je je hebt aangemeld voor updates over <strong>${profiel.vakgebied}</strong>.<br>
+        Je ontvangt deze nieuwsbrief omdat je je hebt aangemeld voor updates over <strong>${escapeHtml(profiel.vakgebied)}</strong>.<br>
         <a href="${beheerUrl}?uitschrijven=1" style="color:#aaa">Uitschrijven</a>
       </div>
     </div>
