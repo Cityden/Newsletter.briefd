@@ -25,3 +25,25 @@ export async function GET(_req: NextRequest) {
 
   return NextResponse.json(data)
 }
+
+export async function DELETE(req: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { id } = await req.json()
+  if (!id) {
+    return NextResponse.json({ error: 'ID vereist' }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from('subscribers')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    return NextResponse.json({ error: 'Verwijderen mislukt' }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
+}

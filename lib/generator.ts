@@ -52,17 +52,18 @@ SAMENVATTING: ${a.samenvatting}`
 REGELS:
 1. Schrijf ALLEEN over wat letterlijk in de aangeleverde bronnen staat
 2. Verzin geen feiten, cijfers of uitspraken die niet in de bronnen staan
-3. Als een artikel niet relevant is voor het vakgebied en organisatietype: laat het weg
-4. Elke bronvermelding moet een exacte URL bevatten uit de aangeleverde lijst
-5. Als er niets relevant is: retourneer exact de tekst GEEN_UPDATES
+3. Selecteer altijd MINIMAAL 2 en maximaal 6 artikelen — ook als de relevantie indirect is
+4. Interpreteer relevantie ruim: wetgeving, beleid, rechterlijke uitspraken of overheidsbesluiten die het vakgebied raken zijn altijd relevant
+5. Elke bronvermelding moet een exacte URL bevatten uit de aangeleverde lijst
+6. Retourneer NOOIT GEEN_UPDATES — als de bronnen schaars zijn, kies dan de meest aanverwante items
 
 FORMAAT: Retourneer een JSON-object met:
 - "onderwerp": e-mailonderwerp (max 60 tekens)
-- "items": array van relevante items, elk met:
+- "items": array van minimaal 2 items, elk met:
   - "titel": duidelijke titel
   - "impact": "hoog" | "gemiddeld" | "laag"
   - "type": "wetgeving" | "uitspraak" | "beleid" | "tarief"
-  - "samenvatting": 2-3 zinnen in begrijpelijk Nederlands
+  - "samenvatting": 2-3 zinnen in begrijpelijk Nederlands over wat dit betekent voor de ontvanger
   - "actie": concrete actie voor de ontvanger (1 zin)
   - "bronUrl": exacte URL uit de aangeleverde bronnen
   - "bronNaam": naam van de bron
@@ -78,7 +79,7 @@ Regio focus: ${profiel.voorkeuren.regio.join(', ')}
 Extra onderwerpen om op te letten: ${profiel.voorkeuren.extraOnderwerpen || 'geen'}
 Alleen hoge impact: ${profiel.voorkeuren.alleenHogeImpact ? 'ja, filter laag en gemiddeld weg' : 'nee, alle relevante updates'}` : ''}
 
-Hieronder de publicaties van deze week. Selecteer wat relevant is en schrijf de nieuwsbrief.
+Selecteer minimaal 2 artikelen die voor dit vakgebied en organisatietype relevant zijn. Bij twijfel: neem het item mee.
 
 ${artikelTekst}`
       }]
@@ -87,8 +88,6 @@ ${artikelTekst}`
 
   const data = await response.json()
   const tekst = data.content?.[0]?.text ?? ''
-
-  if (tekst.trim() === 'GEEN_UPDATES') return null
 
   let parsed: {
     onderwerp: string

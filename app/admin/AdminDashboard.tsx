@@ -63,6 +63,20 @@ export default function AdminDashboard() {
     }
   }
 
+  async function verwijderSubscriber(id: string, naam: string) {
+    if (!confirm(`Weet je zeker dat je ${naam} wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return
+
+    const res = await fetch('/api/admin/subscribers', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+
+    if (res.ok) {
+      setSubscribers(s => s.filter(sub => sub.id !== id))
+    }
+  }
+
   async function uitloggen() {
     await fetch('/api/admin/login', { method: 'DELETE' })
     router.push('/admin/login')
@@ -170,32 +184,40 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
-                        {sub.actief && (
-                          <div>
-                            <button
-                              style={{
-                                fontSize: 11, fontWeight: 700, padding: '6px 14px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
-                                opacity: status === 'laden' ? 0.5 : 1,
-                                background: status === 'succes' ? 'rgba(74,222,128,.1)' : status === 'fout' ? 'rgba(248,113,113,.1)' : status === 'geen-updates' ? '#181818' : '#4ade80',
-                                color: status === 'succes' ? '#4ade80' : status === 'fout' ? '#f87171' : status === 'geen-updates' ? '#444' : '#0a0a0a',
-                                border: status === 'succes' ? '1px solid rgba(74,222,128,.2)' : status === 'fout' ? '1px solid rgba(248,113,113,.2)' : status === 'geen-updates' ? '1px solid #222' : '1px solid transparent',
-                              } as React.CSSProperties}
-                              onClick={() => verstuurNieuwsbrief(sub.email)}
-                              disabled={status === 'laden'}
-                            >
-                              {status === 'laden' ? 'Bezig…'
-                                : status === 'succes' ? '✓ Verstuurd'
-                                : status === 'geen-updates' ? '— Geen updates'
-                                : status === 'fout' ? '✗ Fout'
-                                : 'Verstuur'}
-                            </button>
-                            {sendDetail[sub.email] && (
-                              <div style={{ fontSize: 11, color: status === 'fout' ? '#f87171' : '#333', marginTop: 4, maxWidth: 180 }}>
-                                {sendDetail[sub.email]}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {sub.actief && (
+                            <div>
+                              <button
+                                style={{
+                                  fontSize: 11, fontWeight: 700, padding: '6px 14px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
+                                  opacity: status === 'laden' ? 0.5 : 1,
+                                  background: status === 'succes' ? 'rgba(74,222,128,.1)' : status === 'fout' ? 'rgba(248,113,113,.1)' : status === 'geen-updates' ? '#181818' : '#4ade80',
+                                  color: status === 'succes' ? '#4ade80' : status === 'fout' ? '#f87171' : status === 'geen-updates' ? '#444' : '#0a0a0a',
+                                  border: status === 'succes' ? '1px solid rgba(74,222,128,.2)' : status === 'fout' ? '1px solid rgba(248,113,113,.2)' : status === 'geen-updates' ? '1px solid #222' : '1px solid transparent',
+                                } as React.CSSProperties}
+                                onClick={() => verstuurNieuwsbrief(sub.email)}
+                                disabled={status === 'laden'}
+                              >
+                                {status === 'laden' ? 'Bezig…'
+                                  : status === 'succes' ? '✓ Verstuurd'
+                                  : status === 'geen-updates' ? '— Geen updates'
+                                  : status === 'fout' ? '✗ Fout'
+                                  : 'Verstuur'}
+                              </button>
+                              {sendDetail[sub.email] && (
+                                <div style={{ fontSize: 11, color: status === 'fout' ? '#f87171' : '#333', marginTop: 4, maxWidth: 180 }}>
+                                  {sendDetail[sub.email]}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <button
+                            style={{ fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', background: 'transparent', color: '#333', border: '1px solid #1e1e1e' }}
+                            onClick={() => verwijderSubscriber(sub.id, sub.naam)}
+                          >
+                            Verwijder
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
