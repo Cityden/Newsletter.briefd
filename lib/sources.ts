@@ -2,40 +2,18 @@
 // Hoofdfeed: feeds.rijksoverheid.nl/nieuws.rss (breed, altijd actueel)
 // Rechtspraak: uitspraken.rechtspraak.nl/rss?rechtsgebied=... (Atom-formaat)
 
+// Rijksoverheid feed is de meest betrouwbare bron (20+ items per dag)
+const RIJKSOVERHEID = { naam: 'Rijksoverheid', url: 'https://feeds.rijksoverheid.nl/nieuws.rss' }
+
 const VASTE_BRONNEN: Record<string, { naam: string; url: string }[]> = {
-  fiscaal: [
-    { naam: 'Rijksoverheid', url: 'https://feeds.rijksoverheid.nl/nieuws.rss' },
-    { naam: 'Rechtspraak Belastingrecht', url: 'https://uitspraken.rechtspraak.nl/rss?rechtsgebied=Belastingrecht' },
-  ],
-  finance: [
-    { naam: 'Rijksoverheid', url: 'https://feeds.rijksoverheid.nl/nieuws.rss' },
-    { naam: 'Rechtspraak Civielrecht', url: 'https://uitspraken.rechtspraak.nl/rss?rechtsgebied=Civielrecht' },
-    { naam: 'Rechtspraak Belastingrecht', url: 'https://uitspraken.rechtspraak.nl/rss?rechtsgebied=Belastingrecht' },
-  ],
-  hr: [
-    { naam: 'Rijksoverheid', url: 'https://feeds.rijksoverheid.nl/nieuws.rss' },
-    { naam: 'Rechtspraak Arbeidsrecht', url: 'https://uitspraken.rechtspraak.nl/rss?rechtsgebied=Arbeidsrecht' },
-  ],
-  privacy: [
-    { naam: 'Rijksoverheid', url: 'https://feeds.rijksoverheid.nl/nieuws.rss' },
-    { naam: 'Rechtspraak Civielrecht', url: 'https://uitspraken.rechtspraak.nl/rss?rechtsgebied=Civielrecht' },
-  ],
-  marketing: [
-    { naam: 'Rijksoverheid', url: 'https://feeds.rijksoverheid.nl/nieuws.rss' },
-    { naam: 'Rechtspraak Civielrecht', url: 'https://uitspraken.rechtspraak.nl/rss?rechtsgebied=Civielrecht' },
-  ],
-  it: [
-    { naam: 'Rijksoverheid', url: 'https://feeds.rijksoverheid.nl/nieuws.rss' },
-    { naam: 'Rechtspraak Civielrecht', url: 'https://uitspraken.rechtspraak.nl/rss?rechtsgebied=Civielrecht' },
-  ],
-  esg: [
-    { naam: 'Rijksoverheid', url: 'https://feeds.rijksoverheid.nl/nieuws.rss' },
-    { naam: 'Rechtspraak Civielrecht', url: 'https://uitspraken.rechtspraak.nl/rss?rechtsgebied=Civielrecht' },
-  ],
-  zorg: [
-    { naam: 'Rijksoverheid', url: 'https://feeds.rijksoverheid.nl/nieuws.rss' },
-    { naam: 'Rechtspraak Gezondheidsrecht', url: 'https://uitspraken.rechtspraak.nl/rss?rechtsgebied=Gezondheidsrecht' },
-  ],
+  fiscaal:    [RIJKSOVERHEID],
+  finance:    [RIJKSOVERHEID],
+  hr:         [RIJKSOVERHEID],
+  privacy:    [RIJKSOVERHEID],
+  marketing:  [RIJKSOVERHEID],
+  it:         [RIJKSOVERHEID],
+  esg:        [RIJKSOVERHEID],
+  zorg:       [RIJKSOVERHEID],
 }
 
 const TOEGESTANE_DOMEINEN = [

@@ -38,25 +38,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Subscriber is uitgeschreven' }, { status: 400 })
   }
 
+  const { getBronnen } = await import('@/lib/sources')
+
   let bronnen: { naam: string; url: string }[] = abonnee.bronnen ?? []
 
-  // Bronnen leeg of verouderd? Regenereer automatisch
-  if (bronnen.length === 0) {
-    const { getBronnen } = await import('@/lib/sources')
-    bronnen = await getBronnen(abonnee.vakgebied)
-    if (bronnen.length > 0) {
-      await supabase.from('subscribers').update({
-        bronnen,
-        bronnen_gegenereerd_op: new Date().toISOString(),
-      }).eq('id', abonnee.id)
-    }
+  // Altijd ophalen met verse bronnen — sla op in Supabase
+  const verseBronnen = await getBronnen(abonnee.vakgebied)
+  if (verseBronnen.length > 0) {
+    bronnen = verseBronnen
+    await supabase.from('subscribers').update({
+      bronnen,
+      bronnen_gegenereerd_op: new Date().toISOString(),
+    }).eq('id', abonnee.id)
   }
 
   if (bronnen.length === 0) {
     return NextResponse.json({ error: 'Geen bronnen beschikbaar voor dit vakgebied' }, { status: 400 })
   }
 
-  // 30 dagen voor handmatige test, 7 voor wekelijks, 31 voor maandelijks
   const dagenTerug = abonnee.frequentie === 'maandelijks' ? 31 : 30
   const artikelen = await fetchArtikelen(bronnen, dagenTerug)
 
