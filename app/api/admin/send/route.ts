@@ -38,12 +38,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Subscriber is uitgeschreven' }, { status: 400 })
   }
 
-  const bronnen: { naam: string; url: string }[] = abonnee.bronnen ?? []
+  let bronnen: { naam: string; url: string }[] = abonnee.bronnen ?? []
+
+  // Bronnen leeg of verouderd? Regenereer automatisch
   if (bronnen.length === 0) {
-    return NextResponse.json({ error: 'Geen bronnen opgeslagen voor deze subscriber' }, { status: 400 })
+    const { getBronnen } = await import('@/lib/sources')
+    bronnen = await getBronnen(abonnee.vakgebied)
+    if (bronnen.length > 0) {
+      await supabase.from('subscribers').update({
+        bronnen,
+        bronnen_gegenereerd_op: new Date().toISOString(),
+      }).eq('id', abonnee.id)
+    }
   }
 
-  const artikelen = await fetchArtikelen(bronnen, 7)
+  if (bronnen.length === 0) {
+    return NextResponse.json({ error: 'Geen bronnen beschikbaar voor dit vakgebied' }, { status: 400 })
+  }
+
+  // 30 dagen voor handmatige test, 7 voor wekelijks, 31 voor maandelijks
+  const dagenTerug = abonnee.frequentie === 'maandelijks' ? 31 : 30
+  const artikelen = await fetchArtikelen(bronnen, dagenTerug)
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
   const emailDomein = process.env.EMAIL_DOMEIN ?? 'resend.dev'

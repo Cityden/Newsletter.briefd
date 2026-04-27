@@ -6,41 +6,67 @@ export interface Artikel {
   bron: string
 }
 
-// Haal RSS feed op en parse items
-async function fetchRSS(url: string, bronnaam: string): Promise<Artikel[]> {
+function get(xml: string, tag: string): string {
+  return (
+    xml.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>`))?.[1] ??
+    xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`))?.[1] ??
+    ''
+  ).trim()
+}
+
+function getLinkAtom(itemXml: string): string {
+  // Atom: <link href="..." rel="alternate"/> of <link href="..."/>
+  return (
+    itemXml.match(/<link[^>]+rel=["']alternate["'][^>]+href=["']([^"']+)["']/)?.[1] ??
+    itemXml.match(/<link[^>]+href=["']([^"']+)["']/)?.[1] ??
+    get(itemXml, 'link') ??
+    ''
+  ).trim()
+}
+
+function parseRSS(xml: string, bronnaam: string): Artikel[] {
+  const items = xml.match(/<item>([\s\S]*?)<\/item>/g) ?? []
+  return items.slice(0, 15).map(item => ({
+    titel: get(item, 'title').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
+    url: get(item, 'link').trim(),
+    samenvatting: get(item, 'description').replace(/<[^>]+>/g, '').trim().slice(0, 500),
+    gepubliceerdOp: get(item, 'pubDate') || get(item, 'dc:date') || '',
+    bron: bronnaam,
+  })).filter(a => a.titel && a.url)
+}
+
+function parseAtom(xml: string, bronnaam: string): Artikel[] {
+  const entries = xml.match(/<entry>([\s\S]*?)<\/entry>/g) ?? []
+  return entries.slice(0, 15).map(entry => ({
+    titel: get(entry, 'title').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
+    url: getLinkAtom(entry),
+    samenvatting: (get(entry, 'summary') || get(entry, 'content')).replace(/<[^>]+>/g, '').trim().slice(0, 500),
+    gepubliceerdOp: get(entry, 'published') || get(entry, 'updated') || '',
+    bron: bronnaam,
+  })).filter(a => a.titel && a.url)
+}
+
+async function fetchFeed(url: string, bronnaam: string): Promise<Artikel[]> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Regelgeving-Nieuwsbrief/1.0' },
+      headers: { 'User-Agent': 'Briefd-Nieuwsbrief/1.0 (+https://briefd.nl)' },
       signal: AbortSignal.timeout(8000),
     })
     if (!res.ok) return []
 
     const xml = await res.text()
-    const items = xml.match(/<item>([\s\S]*?)<\/item>/g) ?? []
 
-    return items.slice(0, 10).map(item => {
-      const get = (tag: string) =>
-        item.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>`))?.[1]
-        ?? item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`))?.[1]
-        ?? ''
-
-      const datumStr = get('pubDate') || get('dc:date') || ''
-      return {
-        titel: get('title').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim(),
-        url: get('link').trim(),
-        samenvatting: get('description').replace(/<[^>]+>/g, '').trim().slice(0, 500),
-        gepubliceerdOp: datumStr,
-        bron: bronnaam,
-      }
-    }).filter(a => a.titel && a.url)
+    // Detecteer Atom vs RSS
+    const isAtom = xml.includes('<feed') && xml.includes('xmlns="http://www.w3.org/2005/Atom"')
+    const artikelen = isAtom ? parseAtom(xml, bronnaam) : parseRSS(xml, bronnaam)
+    return artikelen
   } catch {
     return []
   }
 }
 
-// Filter artikelen van de afgelopen N dagen
 function isRecent(datumStr: string, dagenTerug: number): boolean {
-  if (!datumStr) return true // Als geen datum: neem mee
+  if (!datumStr) return true
   const datum = new Date(datumStr)
   if (isNaN(datum.getTime())) return true
   const grens = new Date()
@@ -48,13 +74,12 @@ function isRecent(datumStr: string, dagenTerug: number): boolean {
   return datum >= grens
 }
 
-// Haal alle recente artikelen op uit bronnenlijst
 export async function fetchArtikelen(
   bronnen: { naam: string; url: string }[],
   dagenTerug = 7
 ): Promise<Artikel[]> {
   const results = await Promise.allSettled(
-    bronnen.map(b => fetchRSS(b.url, b.naam))
+    bronnen.map(b => fetchFeed(b.url, b.naam))
   )
 
   const alle = results
@@ -62,7 +87,6 @@ export async function fetchArtikelen(
     .flatMap(r => r.value)
     .filter(a => isRecent(a.gepubliceerdOp, dagenTerug))
 
-  // Dedupliceer op URL
   const gezien = new Set<string>()
   return alle.filter(a => {
     if (gezien.has(a.url)) return false
