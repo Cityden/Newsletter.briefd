@@ -26,7 +26,7 @@ function getLinkAtom(itemXml: string): string {
 
 function parseRSS(xml: string, bronnaam: string): Artikel[] {
   const items = xml.match(/<item>([\s\S]*?)<\/item>/g) ?? []
-  return items.slice(0, 15).map(item => ({
+  return items.slice(0, 25).map(item => ({
     titel: get(item, 'title').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
     url: get(item, 'link').trim(),
     samenvatting: get(item, 'description').replace(/<[^>]+>/g, '').trim().slice(0, 500),
@@ -37,7 +37,7 @@ function parseRSS(xml: string, bronnaam: string): Artikel[] {
 
 function parseAtom(xml: string, bronnaam: string): Artikel[] {
   const entries = xml.match(/<entry>([\s\S]*?)<\/entry>/g) ?? []
-  return entries.slice(0, 15).map(entry => ({
+  return entries.slice(0, 25).map(entry => ({
     titel: get(entry, 'title').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
     url: getLinkAtom(entry),
     samenvatting: (get(entry, 'summary') || get(entry, 'content')).replace(/<[^>]+>/g, '').trim().slice(0, 500),

@@ -88,6 +88,7 @@ ${artikelTekst}`
 
   const data = await response.json()
   const tekst = data.content?.[0]?.text ?? ''
+  console.log(`[generator] Claude response (eerste 500 tekens): ${tekst.slice(0, 500)}`)
 
   let parsed: {
     onderwerp: string
@@ -107,10 +108,12 @@ ${artikelTekst}`
   try {
     const clean = tekst.replace(/```json|```/g, '').trim()
     parsed = JSON.parse(clean)
-  } catch {
+  } catch (err) {
+    console.error(`[generator] JSON parse mislukt:`, err, `\nTekst: ${tekst.slice(0, 300)}`)
     return null
   }
 
+  console.log(`[generator] Items gevonden: ${parsed.items?.length ?? 0}`)
   if (!parsed.items?.length) return null
 
   const html = buildHTML(parsed, profiel, beheerUrl)

@@ -20,16 +20,17 @@ const DTC              = { naam: 'Digital Trust Center',              url: 'http
 const RVO              = { naam: 'RVO',                               url: 'https://www.rvo.nl/rss.xml' }
 const AP               = { naam: 'Autoriteit Persoonsgegevens',       url: 'https://www.autoriteitpersoonsgegevens.nl/nl/actueel/rss.xml' }
 const INKOMSTENBELAST  = { naam: 'Rijksoverheid – Inkomstenbelasting', url: 'https://feeds.rijksoverheid.nl/onderwerpen/inkomstenbelasting/nieuws.rss' }
+const RECHTSPRAAK      = { naam: 'Rechtspraak.nl',                    url: 'https://uitspraken.rechtspraak.nl/rss' }
 
 const VASTE_BRONNEN: Record<string, { naam: string; url: string }[]> = {
-  fiscaal:   [INKOMSTENBELAST, MIN_FINANCIEN, RIJKSOVERHEID],
-  finance:   [AFM_PROF, AFM_CONS, MIN_FINANCIEN, RIJKSOVERHEID],
-  hr:        [MIN_SZW, RIJKSOVERHEID],
-  privacy:   [AP, MIN_JV, MIN_BZK, RIJKSOVERHEID],
-  marketing: [MIN_EZK, RIJKSOVERHEID],
-  it:        [DTC, RIJKSOVERHEID],
-  esg:       [RVO, MIN_IW, MIN_EZK, RIJKSOVERHEID],
-  zorg:      [MIN_VWS, RIJKSOVERHEID],
+  fiscaal:   [INKOMSTENBELAST, MIN_FINANCIEN, RECHTSPRAAK, RIJKSOVERHEID],
+  finance:   [AFM_PROF, AFM_CONS, MIN_FINANCIEN, RECHTSPRAAK, RIJKSOVERHEID],
+  hr:        [MIN_SZW, RECHTSPRAAK, RIJKSOVERHEID],
+  privacy:   [AP, MIN_JV, MIN_BZK, RECHTSPRAAK, RIJKSOVERHEID],
+  marketing: [MIN_EZK, RECHTSPRAAK, RIJKSOVERHEID],
+  it:        [DTC, RECHTSPRAAK, RIJKSOVERHEID],
+  esg:       [RVO, MIN_IW, MIN_EZK, RECHTSPRAAK, RIJKSOVERHEID],
+  zorg:      [MIN_VWS, RECHTSPRAAK, RIJKSOVERHEID],
 }
 
 const TOEGESTANE_DOMEINEN = [
