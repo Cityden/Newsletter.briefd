@@ -18,23 +18,25 @@ function uitlegVakgebied(vakgebied: string): string {
   const v = vakgebied.toLowerCase()
   if (v.includes('fiscal') || v.includes('belasting') || v.includes('vpb') || v.includes('btw') || v.includes('tax'))
     return 'fiscaal recht, belastingwetgeving, btw, vennootschapsbelasting, inkomstenbelasting'
-  if (v.includes('financ') || v.includes('boekhoud') || v.includes('accoun') || v.includes('afm') || v.includes('controller'))
-    return 'financieel toezicht, boekhoud- en verslaggevingsregels, kapitaalmarkten, compliance'
-  if (v.includes('hr') || v.includes('human resource') || v.includes('personeels') || v.includes('arbeid') || v.includes('cao') || v.includes('loondienst'))
+  if (v.includes('financ') || v.includes('boekhoud') || v.includes('accoun') || v.includes('controller') || v.includes('cfo') || v.includes('audit') || v.includes('treasury'))
+    return 'financieel toezicht, boekhoud- en verslaggevingsregels, kapitaalmarkten, jaarrekening, compliance'
+  if (v.includes('hr ') || v.includes(' hr') || v === 'hr' || v.includes('human resource') || v.includes('personeel') || v.includes('arbeid') || v.includes('cao') || v.includes('recrut') || v.includes('talent'))
     return 'arbeidsrecht, personeelsbeleid, cao-regelgeving, sociale zekerheid, ontslagrecht, loondoorbetaling'
-  if (v.includes('privacy') || v.includes('avg') || v.includes('gdpr') || v.includes('data') || v.includes('persoonsgegevens'))
+  if (v.includes('privacy') || v.includes('avg') || v.includes('gdpr') || v.includes('data protec') || v.includes('persoonsgegevens') || v.includes('dpo'))
     return 'privacywetgeving, AVG/GDPR, gegevensbescherming, datalekken, toezicht Autoriteit Persoonsgegevens'
-  if (v.includes('marketing') || v.includes('reclame') || v.includes('communicatie') || v.includes('consument'))
-    return 'reclamewetgeving, consumentenbescherming, mededingingsrecht, ACM-toezicht'
-  if (v.includes('it') || v.includes('ict') || v.includes('cyber') || v.includes('software') || v.includes('tech') || v.includes('digital'))
-    return 'cybersecurity, digitalisering, NIS2, informatiebeveiliging, softwarewetgeving'
-  if (v.includes('esg') || v.includes('duurzaam') || v.includes('milieu') || v.includes('klimaat') || v.includes('sustainab'))
+  if (v.includes('compliance') || v.includes('legal') || v.includes('juridisch') || v.includes('jurist') || v.includes('counsel') || v.includes('recht'))
+    return 'wet- en regelgeving, juridische compliance, toezicht, handhaving, bestuursrecht'
+  if (v.includes('marketing') || v.includes('reclame') || v.includes('communicat') || v.includes('consument') || v.includes('brand') || v.includes('campagne'))
+    return 'reclamewetgeving, consumentenbescherming, mededingingsrecht, ACM-toezicht, cookiewetgeving'
+  if (v.includes('it') || v.includes('ict') || v.includes('cyber') || v.includes('software') || v.includes('tech') || v.includes('digital') || v.includes('ciso') || v.includes('cto') || v.includes('infra'))
+    return 'cybersecurity, digitalisering, NIS2, informatiebeveiliging, softwarewetgeving, AI-regelgeving'
+  if (v.includes('esg') || v.includes('duurzaam') || v.includes('milieu') || v.includes('klimaat') || v.includes('sustainab') || v.includes('csrd') || v.includes('impact'))
     return 'ESG-regelgeving, duurzaamheidsrapportage, CSRD, klimaatbeleid, milieurecht'
-  if (v.includes('zorg') || v.includes('medisch') || v.includes('gezondheid') || v.includes('pharma') || v.includes('vws'))
+  if (v.includes('zorg') || v.includes('medisch') || v.includes('gezondheid') || v.includes('pharma') || v.includes('care') || v.includes('klinisch'))
     return 'zorgwetgeving, Wkkgz, zorginkoop, NZa-toezicht, geneesmiddelenbeleid'
-  if (v.includes('inkoop') || v.includes('aanbesteding') || v.includes('procurement'))
-    return 'aanbestedingsrecht, inkoopbeleid, Europese aanbestedingsrichtlijnen'
-  return ''
+  if (v.includes('inkoop') || v.includes('aanbesteding') || v.includes('procurement') || v.includes('supply') || v.includes('logistiek') || v.includes('operati'))
+    return 'aanbestedingsrecht, inkoopbeleid, supply chain regelgeving, Europese aanbestedingsrichtlijnen'
+  return 'algemene wet- en regelgeving, overheidsbeleid, compliance'
 }
 
 export async function genereerNieuwsbrief(

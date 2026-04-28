@@ -45,15 +45,16 @@ function isBetrouwbaarDomein(url: string): boolean {
 
 function normaliseerVakgebied(vakgebied: string): string {
   const lower = vakgebied.toLowerCase()
-  if (lower.includes('fiscal') || lower.includes('belasting') || lower.includes('vpb') || lower.includes('btw') || lower.includes('inkomstenbelasting')) return 'fiscaal'
-  if (lower.includes('financ') || lower.includes('boekhoud') || lower.includes('accoun') || lower.includes('afm') || lower.includes('kapitaal')) return 'finance'
-  if (lower.includes('hr') || lower.includes('human') || lower.includes('arbeid') || lower.includes('personeel') || lower.includes('loondienst') || lower.includes('cao')) return 'hr'
-  if (lower.includes('privacy') || lower.includes('avg') || lower.includes('gdpr') || lower.includes('data') || lower.includes('persoonsgegevens')) return 'privacy'
-  if (lower.includes('marketing') || lower.includes('reclame') || lower.includes('communicatie') || lower.includes('consument')) return 'marketing'
-  if (lower.includes('it') || lower.includes('cyber') || lower.includes('software') || lower.includes('tech') || lower.includes('digital') || lower.includes('ict')) return 'it'
-  if (lower.includes('esg') || lower.includes('duurzaam') || lower.includes('milieu') || lower.includes('sustainab') || lower.includes('klimaat') || lower.includes('co2')) return 'esg'
-  if (lower.includes('zorg') || lower.includes('medisch') || lower.includes('gezondheid') || lower.includes('pharma') || lower.includes('vws')) return 'zorg'
-  if (lower.includes('inkoop') || lower.includes('aanbesteding') || lower.includes('procurement')) return 'finance'
+  if (lower.includes('fiscal') || lower.includes('belasting') || lower.includes('vpb') || lower.includes('btw') || lower.includes('inkomstenbelasting') || lower.includes('tax')) return 'fiscaal'
+  if (lower.includes('financ') || lower.includes('boekhoud') || lower.includes('accoun') || lower.includes('afm') || lower.includes('kapitaal') || lower.includes('controller') || lower.includes('cfo') || lower.includes('treasury') || lower.includes('audit')) return 'finance'
+  if (lower.includes('hr ') || lower.includes(' hr') || lower === 'hr' || lower.includes('human resource') || lower.includes('human capital') || lower.includes('arbeid') || lower.includes('personeel') || lower.includes('loondienst') || lower.includes('cao') || lower.includes('recrut') || lower.includes('talent') || lower.includes('workforce')) return 'hr'
+  if (lower.includes('privacy') || lower.includes('avg') || lower.includes('gdpr') || lower.includes('data protec') || lower.includes('persoonsgegevens') || lower.includes('compliance') || lower.includes('dpo')) return 'privacy'
+  if (lower.includes('marketing') || lower.includes('reclame') || lower.includes('communicat') || lower.includes('consument') || lower.includes('brand') || lower.includes('content') || lower.includes('campagne')) return 'marketing'
+  if (lower.includes('it') || lower.includes('ict') || lower.includes('cyber') || lower.includes('software') || lower.includes('tech') || lower.includes('digital') || lower.includes('security') || lower.includes('ciso') || lower.includes('cto') || lower.includes('developer') || lower.includes('infra')) return 'it'
+  if (lower.includes('esg') || lower.includes('duurzaam') || lower.includes('milieu') || lower.includes('sustainab') || lower.includes('klimaat') || lower.includes('co2') || lower.includes('csrd') || lower.includes('impact')) return 'esg'
+  if (lower.includes('zorg') || lower.includes('medisch') || lower.includes('gezondheid') || lower.includes('pharma') || lower.includes('vws') || lower.includes('klinisch') || lower.includes('patient') || lower.includes('care')) return 'zorg'
+  if (lower.includes('inkoop') || lower.includes('aanbesteding') || lower.includes('procurement') || lower.includes('supply') || lower.includes('logistiek') || lower.includes('operati')) return 'finance'
+  if (lower.includes('legal') || lower.includes('juridisch') || lower.includes('jurist') || lower.includes('advocaat') || lower.includes('recht') || lower.includes('counsel')) return 'privacy'
   return 'onbekend'
 }
 
