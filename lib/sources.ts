@@ -21,11 +21,12 @@ const RVO              = { naam: 'RVO',                               url: 'http
 const AP               = { naam: 'Autoriteit Persoonsgegevens',       url: 'https://www.autoriteitpersoonsgegevens.nl/nl/actueel/rss.xml' }
 const INKOMSTENBELAST  = { naam: 'Rijksoverheid – Inkomstenbelasting', url: 'https://feeds.rijksoverheid.nl/onderwerpen/inkomstenbelasting/nieuws.rss' }
 const RECHTSPRAAK      = { naam: 'Rechtspraak.nl',                    url: 'https://uitspraken.rechtspraak.nl/rss' }
+const AWVN             = { naam: 'AWVN (werkgeversvereniging)',        url: 'https://www.awvn.nl/feed/' }
 
 const VASTE_BRONNEN: Record<string, { naam: string; url: string }[]> = {
   fiscaal:   [INKOMSTENBELAST, MIN_FINANCIEN, RECHTSPRAAK, RIJKSOVERHEID],
   finance:   [AFM_PROF, AFM_CONS, MIN_FINANCIEN, RECHTSPRAAK, RIJKSOVERHEID],
-  hr:        [MIN_SZW, RECHTSPRAAK, RIJKSOVERHEID],
+  hr:        [MIN_SZW, AWVN, RECHTSPRAAK, RIJKSOVERHEID],
   privacy:   [AP, MIN_JV, MIN_BZK, RECHTSPRAAK, RIJKSOVERHEID],
   marketing: [MIN_EZK, RECHTSPRAAK, RIJKSOVERHEID],
   it:        [DTC, RECHTSPRAAK, RIJKSOVERHEID],
