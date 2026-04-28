@@ -45,7 +45,7 @@ SAMENVATTING: ${a.samenvatting}`
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4000,
       system: `Je bent een juridisch redacteur die wekelijkse regelgevingsupdates schrijft voor professionals.
 
@@ -87,8 +87,12 @@ ${artikelTekst}`
   })
 
   const data = await response.json()
+  if (data.error || !data.content) {
+    console.error(`[generator] Anthropic API fout:`, JSON.stringify(data).slice(0, 500))
+    return null
+  }
   const tekst = data.content?.[0]?.text ?? ''
-  console.log(`[generator] Claude response (eerste 500 tekens): ${tekst.slice(0, 500)}`)
+  console.log(`[generator] Claude response (eerste 300 tekens): ${tekst.slice(0, 300)}`)
 
   let parsed: {
     onderwerp: string
