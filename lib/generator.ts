@@ -73,28 +73,34 @@ SAMENVATTING: ${a.samenvatting}`
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 4000,
-      system: `Je bent een juridisch redacteur die wekelijkse regelgevingsupdates schrijft voor professionals.
+      system: `Je bent een juridisch redacteur die regelgevingsupdates schrijft voor professionals.
 
-REGELS:
-1. Schrijf ALLEEN over wat letterlijk in de aangeleverde bronnen staat
-2. Verzin geen feiten, cijfers of uitspraken die niet in de bronnen staan
-3. Selecteer altijd MINIMAAL 2 en maximaal 6 artikelen — ook als de relevantie indirect is
-4. Interpreteer relevantie ruim: wetgeving, beleid, rechterlijke uitspraken of overheidsbesluiten die het vakgebied raken zijn altijd relevant
-5. Elke bronvermelding moet een exacte URL bevatten uit de aangeleverde lijst
-6. Retourneer NOOIT GEEN_UPDATES — als de bronnen schaars zijn, kies dan de meest aanverwante items
+KRITIEKE OUTPUTREGEL: Je antwoord bestaat UITSLUITEND uit één geldig JSON-object. Begin direct met { en eindig met }. Geen inleiding, geen uitleg, geen tekst buiten de JSON — ook niet als je weinig relevants vindt.
 
-FORMAAT: Retourneer een JSON-object met:
-- "onderwerp": e-mailonderwerp (max 60 tekens)
-- "items": array van minimaal 2 items, elk met:
-  - "titel": duidelijke titel
-  - "impact": "hoog" | "gemiddeld" | "laag"
-  - "type": "wetgeving" | "uitspraak" | "beleid" | "tarief"
-  - "samenvatting": 2-3 zinnen in begrijpelijk Nederlands over wat dit betekent voor de ontvanger
-  - "actie": concrete actie voor de ontvanger (1 zin)
-  - "bronUrl": exacte URL uit de aangeleverde bronnen
-  - "bronNaam": naam van de bron
-  - "datum": publicatiedatum
-  - "vergelijkingstabel": null OF array van rijen [{aspect, oud, nieuw}] — ALLEEN invullen als er concrete cijfers/tarieven veranderen`,
+SELECTIEREGELS:
+1. Schrijf alleen over wat letterlijk in de aangeleverde bronnen staat
+2. Selecteer MINIMAAL 2 en maximaal 6 items — ook als de relevantie indirect is
+3. Interpreteer relevantie ruim: rechterlijke uitspraken, wetgeving, beleid of overheidsbesluiten die het vakgebied ook zijdelings raken tellen mee
+4. Als bronnen schaars zijn: kies de meest aanverwante items — nooit een lege array retourneren
+5. Elke bronUrl moet een exacte URL zijn uit de aangeleverde lijst
+
+JSON-STRUCTUUR:
+{
+  "onderwerp": "e-mailonderwerp max 60 tekens",
+  "items": [
+    {
+      "titel": "duidelijke titel",
+      "impact": "hoog" of "gemiddeld" of "laag",
+      "type": "wetgeving" of "uitspraak" of "beleid" of "tarief",
+      "samenvatting": "2-3 zinnen wat dit betekent voor de ontvanger",
+      "actie": "concrete actie in 1 zin",
+      "bronUrl": "exacte URL uit de lijst",
+      "bronNaam": "naam van de bron",
+      "datum": "publicatiedatum",
+      "vergelijkingstabel": null
+    }
+  ]
+}`,
       messages: [{
         role: 'user',
         content: `Ontvanger: ${profiel.naam}
@@ -105,7 +111,7 @@ Regio focus: ${profiel.voorkeuren.regio.join(', ')}
 Extra onderwerpen om op te letten: ${profiel.voorkeuren.extraOnderwerpen || 'geen'}
 Alleen hoge impact: ${profiel.voorkeuren.alleenHogeImpact ? 'ja, filter laag en gemiddeld weg' : 'nee, alle relevante updates'}` : ''}
 
-Selecteer minimaal 2 artikelen die voor dit vakgebied en organisatietype relevant zijn. Bij twijfel: neem het item mee.
+Selecteer minimaal 2 items. Retourneer ALLEEN het JSON-object, geen andere tekst.
 
 ${artikelTekst}`
       }]
