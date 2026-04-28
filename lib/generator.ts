@@ -120,6 +120,11 @@ ${artikelTekst}`
   console.log(`[generator] Items gevonden: ${parsed.items?.length ?? 0}`)
   if (!parsed.items?.length) return null
 
+  const impactVolgorde: Record<string, number> = { hoog: 0, gemiddeld: 1, laag: 2 }
+  parsed.items.sort((a: { impact: string }, b: { impact: string }) =>
+    (impactVolgorde[a.impact] ?? 1) - (impactVolgorde[b.impact] ?? 1)
+  )
+
   const html = buildHTML(parsed, profiel, beheerUrl)
   return { onderwerp: parsed.onderwerp, html }
 }
