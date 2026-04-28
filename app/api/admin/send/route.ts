@@ -82,7 +82,9 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const { error: mailFout } = await resend.emails.send({
+  console.log(`[admin/send] Versturen naar ${abonnee.email} via Resend, from: onboarding@${emailDomein}`)
+
+  const { data: mailData, error: mailFout } = await resend.emails.send({
     from: `Regelgeving Nieuwsbrief <onboarding@${emailDomein}>`,
     to: abonnee.email,
     subject: `[TEST] ${resultaat.onderwerp}`,
@@ -90,8 +92,10 @@ export async function POST(req: NextRequest) {
   })
 
   if (mailFout) {
+    console.error(`[admin/send] Resend fout:`, JSON.stringify(mailFout))
     return NextResponse.json({ error: 'Versturen mislukt', detail: mailFout }, { status: 500 })
   }
 
+  console.log(`[admin/send] Verstuurd, Resend ID: ${mailData?.id}`)
   return NextResponse.json({ ok: true, onderwerp: resultaat.onderwerp, aantalArtikelen: artikelen.length })
 }
