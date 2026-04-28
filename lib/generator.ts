@@ -14,6 +14,29 @@ interface Profiel {
   voorkeuren?: Voorkeuren
 }
 
+function uitlegVakgebied(vakgebied: string): string {
+  const v = vakgebied.toLowerCase()
+  if (v.includes('fiscal') || v.includes('belasting') || v.includes('vpb') || v.includes('btw') || v.includes('tax'))
+    return 'fiscaal recht, belastingwetgeving, btw, vennootschapsbelasting, inkomstenbelasting'
+  if (v.includes('financ') || v.includes('boekhoud') || v.includes('accoun') || v.includes('afm') || v.includes('controller'))
+    return 'financieel toezicht, boekhoud- en verslaggevingsregels, kapitaalmarkten, compliance'
+  if (v.includes('hr') || v.includes('human resource') || v.includes('personeels') || v.includes('arbeid') || v.includes('cao') || v.includes('loondienst'))
+    return 'arbeidsrecht, personeelsbeleid, cao-regelgeving, sociale zekerheid, ontslagrecht, loondoorbetaling'
+  if (v.includes('privacy') || v.includes('avg') || v.includes('gdpr') || v.includes('data') || v.includes('persoonsgegevens'))
+    return 'privacywetgeving, AVG/GDPR, gegevensbescherming, datalekken, toezicht Autoriteit Persoonsgegevens'
+  if (v.includes('marketing') || v.includes('reclame') || v.includes('communicatie') || v.includes('consument'))
+    return 'reclamewetgeving, consumentenbescherming, mededingingsrecht, ACM-toezicht'
+  if (v.includes('it') || v.includes('ict') || v.includes('cyber') || v.includes('software') || v.includes('tech') || v.includes('digital'))
+    return 'cybersecurity, digitalisering, NIS2, informatiebeveiliging, softwarewetgeving'
+  if (v.includes('esg') || v.includes('duurzaam') || v.includes('milieu') || v.includes('klimaat') || v.includes('sustainab'))
+    return 'ESG-regelgeving, duurzaamheidsrapportage, CSRD, klimaatbeleid, milieurecht'
+  if (v.includes('zorg') || v.includes('medisch') || v.includes('gezondheid') || v.includes('pharma') || v.includes('vws'))
+    return 'zorgwetgeving, Wkkgz, zorginkoop, NZa-toezicht, geneesmiddelenbeleid'
+  if (v.includes('inkoop') || v.includes('aanbesteding') || v.includes('procurement'))
+    return 'aanbestedingsrecht, inkoopbeleid, Europese aanbestedingsrichtlijnen'
+  return ''
+}
+
 export async function genereerNieuwsbrief(
   artikelen: Artikel[],
   profiel: Profiel,
@@ -36,6 +59,9 @@ SAMENVATTING: ${a.samenvatting}`
     groot: 'groot bedrijf (250+ medewerkers)',
     overheid: 'overheids- of non-profitorganisatie',
   }
+
+  // Vertaal vakgebied (kan een functietitel zijn) naar domeinbeschrijving voor Claude
+  const vakgebiedContext = uitlegVakgebied(profiel.vakgebied)
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -72,7 +98,7 @@ FORMAAT: Retourneer een JSON-object met:
       messages: [{
         role: 'user',
         content: `Ontvanger: ${profiel.naam}
-Vakgebied: ${profiel.vakgebied}
+Vakgebied: ${profiel.vakgebied}${vakgebiedContext ? ` (${vakgebiedContext})` : ''}
 Organisatie: ${orgLabel[profiel.organisatie] ?? profiel.organisatie}
 ${profiel.voorkeuren ? `Schrijfstijl: ${profiel.voorkeuren.stijl === 'kort' ? 'kort en bondig, max 3 zinnen per item' : 'uitgebreid met context en achtergrond'}
 Regio focus: ${profiel.voorkeuren.regio.join(', ')}
