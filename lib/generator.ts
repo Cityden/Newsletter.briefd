@@ -10,6 +10,7 @@ interface Voorkeuren {
 interface Profiel {
   naam: string
   vakgebied: string
+  branche?: string
   organisatie: string
   voorkeuren?: Voorkeuren
 }
@@ -107,6 +108,7 @@ JSON-STRUCTUUR:
         role: 'user',
         content: `Ontvanger: ${profiel.naam}
 Vakgebied: ${profiel.vakgebied}${vakgebiedContext ? ` (${vakgebiedContext})` : ''}
+${profiel.branche ? `Branche: ${profiel.branche}` : ''}
 Organisatie: ${orgLabel[profiel.organisatie] ?? profiel.organisatie}
 ${profiel.voorkeuren ? `Schrijfstijl: ${profiel.voorkeuren.stijl === 'kort' ? 'kort en bondig, max 3 zinnen per item' : 'uitgebreid met context en achtergrond'}
 Regio focus: ${profiel.voorkeuren.regio.join(', ')}

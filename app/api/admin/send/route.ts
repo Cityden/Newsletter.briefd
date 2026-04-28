@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   const { data: abonnee, error: dbFout } = await supabase
     .from('subscribers')
-    .select('id, naam, email, vakgebied, organisatie, frequentie, bronnen, token, actief')
+    .select('id, naam, email, vakgebied, branche, organisatie, frequentie, bronnen, token, actief')
     .eq('email', email)
     .single()
 
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
   const resultaat = await genereerNieuwsbrief(
     artikelen,
-    { naam: abonnee.naam, vakgebied: abonnee.vakgebied, organisatie: abonnee.organisatie },
+    { naam: abonnee.naam, vakgebied: abonnee.vakgebied, branche: abonnee.branche ?? undefined, organisatie: abonnee.organisatie },
     beheerUrl
   )
 

@@ -16,7 +16,7 @@ function escapeHtml(str: string): string {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { naam, email, vakgebied, organisatie, frequentie, voorkeuren } = body
+  const { naam, email, vakgebied, branche, organisatie, frequentie, voorkeuren } = body
 
   if (!naam || !email || !vakgebied || !organisatie || !frequentie) {
     return NextResponse.json({ error: 'Verplichte velden ontbreken' }, { status: 400 })
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       actief: true,
       bronnen,
       bronnen_gegenereerd_op: new Date().toISOString(),
+      ...(branche ? { branche } : {}),
       ...(voorkeuren ? { voorkeuren } : {}),
     }, { onConflict: 'email' })
     .select('token')

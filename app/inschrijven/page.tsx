@@ -9,6 +9,24 @@ const ORG_OPTIES = [
   { value: 'overheid', label: 'Overheid / non-profit' },
 ]
 
+const BRANCHE_OPTIES = [
+  'Horeca & Toerisme',
+  'Detailhandel & Retail',
+  'Financiële dienstverlening',
+  'Gezondheidszorg & Welzijn',
+  'Bouw & Vastgoed',
+  'Industrie & Productie',
+  'Transport & Logistiek',
+  'ICT & Tech',
+  'Onderwijs & Onderzoek',
+  'Zakelijke dienstverlening',
+  'Overheid & Non-profit',
+  'Energie & Utilities',
+  'Agri, Food & Farma',
+  'Media & Communicatie',
+  'Anders',
+]
+
 const STIJL_OPTIES = [
   { value: 'kort', label: 'Kort & bondig', desc: 'Alleen wat ik moet weten, max 5 min lezen' },
   { value: 'uitgebreid', label: 'Uitgebreid', desc: 'Met context, voorbeelden en achtergrond' },
@@ -19,7 +37,7 @@ const REGIO_OPTIES = ['Nederland', 'Europa (EU)', 'Internationaal']
 export default function InschrijvenPage() {
   const [stap, setStap] = useState(1)
   const [form, setForm] = useState({
-    naam: '', email: '', vakgebied: '', organisatie: 'mkb', frequentie: 'wekelijks',
+    naam: '', email: '', vakgebied: '', branche: '', organisatie: 'mkb', frequentie: 'wekelijks',
     voorkeuren: {
       stijl: 'kort',
       regio: ['Nederland'],
@@ -103,6 +121,23 @@ export default function InschrijvenPage() {
               onChange={e => setForm(f => ({ ...f, vakgebied: e.target.value }))}
             />
             <div style={s.hint}>Vul vrij in — Briefd past zich automatisch aan</div>
+          </div>
+
+          <div style={s.field}>
+            <label style={s.label}>
+              Branche <span style={{ color: '#333', fontWeight: 400 }}>(optioneel)</span>
+            </label>
+            <select
+              style={{ ...s.input, cursor: 'pointer' }}
+              value={form.branche}
+              onChange={e => setForm(f => ({ ...f, branche: e.target.value }))}
+            >
+              <option value="">Selecteer jouw branche…</option>
+              {BRANCHE_OPTIES.map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+            <div style={s.hint}>Briefd houdt rekening met branche-specifieke regelgeving</div>
           </div>
 
           <div style={s.field}>
