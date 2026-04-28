@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest) {
 
   const { data, error } = await supabase
     .from('subscribers')
-    .select('id, naam, email, vakgebied, organisatie, frequentie, actief, aangemeld_op, laatste_mail_op')
+    .select('id, naam, email, vakgebied, branche, organisatie, frequentie, actief, aangemeld_op, laatste_mail_op')
     .order('aangemeld_op', { ascending: false })
 
   if (error) {
@@ -24,6 +24,28 @@ export async function GET(_req: NextRequest) {
   }
 
   return NextResponse.json(data)
+}
+
+export async function PATCH(req: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { id, branche } = await req.json()
+  if (!id) {
+    return NextResponse.json({ error: 'ID vereist' }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from('subscribers')
+    .update({ branche: branche ?? null })
+    .eq('id', id)
+
+  if (error) {
+    return NextResponse.json({ error: 'Bijwerken mislukt' }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
 }
 
 export async function DELETE(req: NextRequest) {

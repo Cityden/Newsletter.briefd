@@ -2,11 +2,20 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+const BRANCHE_OPTIES = [
+  'Horeca & Toerisme', 'Detailhandel & Retail', 'Financiële dienstverlening',
+  'Gezondheidszorg & Welzijn', 'Bouw & Vastgoed', 'Industrie & Productie',
+  'Transport & Logistiek', 'ICT & Tech', 'Onderwijs & Onderzoek',
+  'Zakelijke dienstverlening', 'Overheid & Non-profit', 'Energie & Utilities',
+  'Agri, Food & Farma', 'Media & Communicatie', 'Anders',
+]
+
 interface Subscriber {
   id: string
   naam: string
   email: string
   vakgebied: string
+  branche: string | null
   organisatie: string
   frequentie: string
   actief: boolean
@@ -63,18 +72,50 @@ export default function AdminDashboard() {
     }
   }
 
+  async function updateBranche(id: string, branche: string) {
+    await fetch('/api/admin/subscribers', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, branche: branche || null }),
+    })
+    setSubscribers(s => s.map(sub => sub.id === id ? { ...sub, branche: branche || null } : sub))
+  }
+
   async function verwijderSubscriber(id: string, naam: string) {
     if (!confirm(`Weet je zeker dat je ${naam} wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return
-
     const res = await fetch('/api/admin/subscribers', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     })
+    if (res.ok) setSubscribers(s => s.filter(sub => sub.id !== id))
+  }
 
-    if (res.ok) {
-      setSubscribers(s => s.filter(sub => sub.id !== id))
-    }
+  function exporteerCSV() {
+    const kolommen = ['Naam', 'E-mail', 'Vakgebied', 'Branche', 'Organisatie', 'Frequentie', 'Status', 'Aangemeld op', 'Laatste mail']
+    const rijen = subscribers.map(s => [
+      s.naam,
+      s.email,
+      s.vakgebied,
+      s.branche ?? '',
+      s.organisatie,
+      s.frequentie,
+      s.actief ? 'Actief' : 'Uitgeschreven',
+      s.aangemeld_op ? new Date(s.aangemeld_op).toLocaleDateString('nl-NL') : '',
+      s.laatste_mail_op ? new Date(s.laatste_mail_op).toLocaleDateString('nl-NL') : '',
+    ])
+
+    const csvInhoud = [kolommen, ...rijen]
+      .map(r => r.map(cel => `"${String(cel).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+
+    const blob = new Blob(['\uFEFF' + csvInhoud], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `briefd-subscribers-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   async function uitloggen() {
@@ -92,16 +133,18 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', padding: '0 0 60px', fontFamily: "'DM Sans', sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
+        select option { background: #1a1a1a; color: #e8e8e6; }
+      `}</style>
 
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid #1a1a1a', padding: '0 2rem', marginBottom: 40 }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: "'DM Serif Display'", fontSize: 18, color: '#e8e8e6', letterSpacing: '-.2px' }}>◈ Briefd</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={{ fontSize: 11, color: '#333', fontWeight: 500 }}>Admin dashboard</span>
             <button
-              style={{ background: 'transparent', border: '1px solid #1e1e1e', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', color: '#555', fontFamily: 'inherit', transition: 'border-color .15s' }}
+              style={{ background: 'transparent', border: '1px solid #1e1e1e', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', color: '#555', fontFamily: 'inherit' }}
               onClick={uitloggen}
             >
               Uitloggen
@@ -110,12 +153,21 @@ export default function AdminDashboard() {
         </div>
       </nav>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2rem' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 2rem' }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>Beheer</div>
-          <div style={{ fontFamily: "'DM Serif Display'", fontSize: 28, fontWeight: 400, color: '#f0f0ee', letterSpacing: '-.3px' }}>Subscribers</div>
+        <div style={{ marginBottom: 32, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>Beheer</div>
+            <div style={{ fontFamily: "'DM Serif Display'", fontSize: 28, fontWeight: 400, color: '#f0f0ee', letterSpacing: '-.3px' }}>Subscribers</div>
+          </div>
+          <button
+            onClick={exporteerCSV}
+            disabled={laden || subscribers.length === 0}
+            style={{ fontSize: 12, fontWeight: 600, padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: '#4ade80', border: '1px solid rgba(74,222,128,.25)', opacity: laden ? 0.4 : 1 }}
+          >
+            Exporteer CSV
+          </button>
         </div>
 
         {/* Stats */}
@@ -146,7 +198,7 @@ export default function AdminDashboard() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
-                  {['Naam', 'E-mail', 'Vakgebied', 'Frequentie', 'Aangemeld', 'Laatste mail', 'Status', 'Actie'].map(kol => (
+                  {['Naam', 'E-mail', 'Vakgebied', 'Branche', 'Frequentie', 'Aangemeld', 'Laatste mail', 'Status', 'Actie'].map(kol => (
                     <th key={kol} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: '#333', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid #1a1a1a', whiteSpace: 'nowrap' }}>
                       {kol}
                     </th>
@@ -158,9 +210,19 @@ export default function AdminDashboard() {
                   const status = sendStatus[sub.email] ?? 'idle'
                   return (
                     <tr key={sub.id} style={{ opacity: sub.actief ? 1 : 0.4 }}>
-                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#d8d8d6', fontWeight: 600 }}>{sub.naam}</td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#d8d8d6', fontWeight: 600, whiteSpace: 'nowrap' }}>{sub.naam}</td>
                       <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#444', fontSize: 12 }}>{sub.email}</td>
-                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#888' }}>{sub.vakgebied}</td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#888', maxWidth: 140 }}>{sub.vakgebied}</td>
+                      <td style={{ padding: '8px 16px', borderBottom: '1px solid #141414', minWidth: 180 }}>
+                        <select
+                          value={sub.branche ?? ''}
+                          onChange={e => updateBranche(sub.id, e.target.value)}
+                          style={{ fontSize: 12, padding: '5px 8px', borderRadius: 6, border: '1px solid #1e1e1e', background: '#0e0e0e', color: sub.branche ? '#888' : '#333', fontFamily: 'inherit', cursor: 'pointer', width: '100%' }}
+                        >
+                          <option value="">— Geen branche —</option>
+                          {BRANCHE_OPTIES.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                      </td>
                       <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
                         <span style={{
                           display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
@@ -171,8 +233,8 @@ export default function AdminDashboard() {
                           {sub.frequentie}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#333', fontSize: 12 }}>{formatDatum(sub.aangemeld_op)}</td>
-                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#333', fontSize: 12 }}>{formatDatum(sub.laatste_mail_op)}</td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#333', fontSize: 12, whiteSpace: 'nowrap' }}>{formatDatum(sub.aangemeld_op)}</td>
+                      <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#333', fontSize: 12, whiteSpace: 'nowrap' }}>{formatDatum(sub.laatste_mail_op)}</td>
                       <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
                         <span style={{
                           display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
@@ -205,7 +267,7 @@ export default function AdminDashboard() {
                                   : 'Verstuur'}
                               </button>
                               {sendDetail[sub.email] && (
-                                <div style={{ fontSize: 11, color: status === 'fout' ? '#f87171' : '#333', marginTop: 4, maxWidth: 180 }}>
+                                <div style={{ fontSize: 11, color: status === 'fout' ? '#f87171' : '#333', marginTop: 4, maxWidth: 160 }}>
                                   {sendDetail[sub.email]}
                                 </div>
                               )}
@@ -224,7 +286,7 @@ export default function AdminDashboard() {
                 })}
                 {!laden && subscribers.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: '#2a2a2a', fontSize: 13 }}>
+                    <td colSpan={9} style={{ padding: '40px 16px', textAlign: 'center', color: '#2a2a2a', fontSize: 13 }}>
                       Nog geen subscribers aangemeld.
                     </td>
                   </tr>
