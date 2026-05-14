@@ -82,12 +82,13 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  console.log(`[admin/send] Versturen naar ${abonnee.email} via Resend, from: onboarding@${emailDomein}`)
+  const testOntvanger = process.env.ADMIN_EMAIL ?? 'marijn@cityden.com'
+  console.log(`[admin/send] Versturen naar ${testOntvanger} (test voor ${abonnee.email}) via Resend`)
 
   const { data: mailData, error: mailFout } = await resend.emails.send({
     from: `Regelgeving Nieuwsbrief <onboarding@${emailDomein}>`,
-    to: abonnee.email,
-    subject: `[TEST] ${resultaat.onderwerp}`,
+    to: testOntvanger,
+    subject: `[TEST voor ${abonnee.naam}] ${resultaat.onderwerp}`,
     html: resultaat.html,
   })
 
