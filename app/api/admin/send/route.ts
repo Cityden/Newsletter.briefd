@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   console.log(`[admin/send] Artikelen gevonden: ${artikelen.length}`)
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
-  const emailDomein = process.env.EMAIL_DOMEIN ?? 'resend.dev'
+  const emailDomein = process.env.EMAIL_DOMEIN ?? 'brieft.online'
   const beheerUrl = `${baseUrl}/voorkeuren?token=${abonnee.token}`
 
   const resultaat = await genereerNieuwsbrief(
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   console.log(`[admin/send] Versturen naar ${testOntvanger} (test voor ${abonnee.email}) via Resend`)
 
   const { data: mailData, error: mailFout } = await resend.emails.send({
-    from: `Regelgeving Nieuwsbrief <onboarding@${emailDomein}>`,
+    from: `Regelgeving Nieuwsbrief <newsletter@${emailDomein}>`,
     to: testOntvanger,
     subject: `[TEST voor ${abonnee.naam}] ${resultaat.onderwerp}`,
     html: resultaat.html,

@@ -73,11 +73,11 @@ export async function POST(req: NextRequest) {
 
   // Stuur bevestigingsmail — fout hier mag aanmelding niet blokkeren
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
-  const emailDomein = process.env.EMAIL_DOMEIN ?? 'resend.dev'
+  const emailDomein = process.env.EMAIL_DOMEIN ?? 'brieft.online'
   const beheerUrl = `${baseUrl}/voorkeuren?token=${data.token}`
 
   const { error: mailFout } = await resend.emails.send({
-    from: `Regelgeving Nieuwsbrief <onboarding@${emailDomein}>`,
+    from: `Regelgeving Nieuwsbrief <newsletter@${emailDomein}>`,
     to: email,
     subject: `Welkom ${escapeHtml(naam)} — je aanmelding is bevestigd`,
     html: bevestigingsmail({ naam, vakgebied, frequentie, beheerUrl }),

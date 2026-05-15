@@ -14,14 +14,14 @@ function isEersteMaandagVanMaand(): boolean {
 
 async function stuurFoutmelding(onderwerp: string, regels: string[]) {
   const alertEmail = process.env.ALERT_EMAIL
-  const emailDomein = process.env.EMAIL_DOMEIN ?? 'resend.dev'
+  const emailDomein = process.env.EMAIL_DOMEIN ?? 'brieft.online'
   if (!alertEmail) return
 
   const datum = new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam' })
   const lijstHTML = regels.map(r => `<li style="margin-bottom:6px">${r}</li>`).join('')
 
   await resend.emails.send({
-    from: `Nieuwsbrief Alerts <onboarding@${emailDomein}>`,
+    from: `Nieuwsbrief Alerts <newsletter@${emailDomein}>`,
     to: alertEmail,
     subject: `⚠️ ${onderwerp}`,
     html: `<!DOCTYPE html>
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
 
   const eersteWeek = isEersteMaandagVanMaand()
   const adminEmail = process.env.ADMIN_EMAIL ?? 'marijn@cityden.com'
-  const emailDomein = process.env.EMAIL_DOMEIN ?? 'resend.dev'
+  const emailDomein = process.env.EMAIL_DOMEIN ?? 'brieft.online'
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
 
   const { data: abonnees, error: dbFout } = await supabase
@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
 
       // Verstuur naar admin — die stuurt door naar subscriber
       const { error: mailFout } = await resend.emails.send({
-        from: `Regelgeving Nieuwsbrief <onboarding@${emailDomein}>`,
+        from: `Regelgeving Nieuwsbrief <newsletter@${emailDomein}>`,
         to: adminEmail,
         subject: `[${abonnee.naam}] ${resultaat.onderwerp}`,
         html: resultaat.html,
