@@ -29,14 +29,23 @@ export default function HomePage() {
         .vak-card:hover { border-color: #2a2a2a !important; }
         .cta-hero:hover { background: #86efac !important; }
         @media (max-width: 768px) {
-          .hero-section { grid-template-columns: 1fr !important; padding: 40px 1.25rem 32px !important; }
+          .nav-links { display: none !important; }
+          .nav-cta { font-size: 12px !important; padding: 6px 14px !important; }
+          .hero-section { grid-template-columns: 1fr !important; padding: 36px 1.25rem 28px !important; gap: 0 !important; }
           .preview-card { display: none !important; }
-          .hero-h1 { font-size: 36px !important; }
-          .stats-bar-grid { grid-template-columns: 1fr !important; }
-          .stats-bar-grid > div { border-right: none !important; border-bottom: 1px solid #1a1a1a; }
-          .stappen-grid { grid-template-columns: repeat(2,1fr) !important; gap: 20px !important; }
+          .hero-badge { font-size: 10px !important; padding: 4px 10px !important; margin-bottom: 16px !important; }
+          .hero-h1 { font-size: 32px !important; line-height: 1.15 !important; }
+          .hero-p { font-size: 14px !important; margin-bottom: 24px !important; }
+          .hero-cta-rij { gap: 10px !important; }
+          .stats-bar-grid { grid-template-columns: repeat(3,1fr) !important; padding: 14px 1.25rem !important; }
+          .stats-getal { font-size: 18px !important; }
+          .sectie-inner { padding: 40px 1.25rem !important; }
+          .sectie-kop { font-size: 22px !important; margin-bottom: 28px !important; }
+          .stappen-grid { grid-template-columns: repeat(2,1fr) !important; gap: 18px !important; }
           .vakgebieden-grid { grid-template-columns: repeat(2,1fr) !important; }
-          .footer-flex { flex-direction: column !important; gap: 8px !important; text-align: center !important; }
+          .cta-inner { padding: 48px 1.25rem !important; }
+          .cta-kop { font-size: 26px !important; }
+          .footer-flex { flex-direction: column !important; gap: 6px !important; text-align: center !important; }
         }
       `}</style>
 
@@ -45,9 +54,11 @@ export default function HomePage() {
         <div style={{ maxWidth: 1040, margin: '0 auto', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: "'DM Serif Display'", fontSize: 20, color: '#e8e8e6', letterSpacing: '-.2px' }}>◈ Brieft</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-            <a href="#hoe" className="nav-link" style={{ fontSize: 13, color: '#555', fontWeight: 500, transition: 'color .15s' }}>Hoe het werkt</a>
-            <a href="#vakgebieden" className="nav-link" style={{ fontSize: 13, color: '#555', fontWeight: 500, transition: 'color .15s' }}>Vakgebieden</a>
-            <Link href="/inschrijven" style={{ background: '#4ade80', color: '#0a0a0a', fontSize: 13, fontWeight: 700, padding: '7px 16px', borderRadius: 7, letterSpacing: '-.01em' }}>
+            <div className="nav-links" style={{ display: 'flex', gap: 28 }}>
+              <a href="#hoe" className="nav-link" style={{ fontSize: 13, color: '#555', fontWeight: 500, transition: 'color .15s' }}>Hoe het werkt</a>
+              <a href="#vakgebieden" className="nav-link" style={{ fontSize: 13, color: '#555', fontWeight: 500, transition: 'color .15s' }}>Vakgebieden</a>
+            </div>
+            <Link href="/inschrijven" className="nav-cta" style={{ background: '#4ade80', color: '#0a0a0a', fontSize: 13, fontWeight: 700, padding: '7px 16px', borderRadius: 7, letterSpacing: '-.01em' }}>
               Aanmelden →
             </Link>
           </div>
@@ -57,7 +68,7 @@ export default function HomePage() {
       {/* HERO */}
       <section className="hero-section" style={{ maxWidth: 1040, margin: '0 auto', padding: '72px 2rem 56px', display: 'grid', gridTemplateColumns: '1fr 420px', gap: 56, alignItems: 'center', opacity: visible ? 1 : 0, transition: 'opacity .6s' }}>
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(74,222,128,.08)', border: '1px solid rgba(74,222,128,.18)', color: '#4ade80', fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 20, marginBottom: 24, letterSpacing: '.04em' }}>
+          <div className="hero-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(74,222,128,.08)', border: '1px solid rgba(74,222,128,.18)', color: '#4ade80', fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 20, marginBottom: 24, letterSpacing: '.04em' }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 2s ease-in-out infinite' }}></span>
             AI-gestuurde regelgeving updates
           </div>
@@ -67,11 +78,11 @@ export default function HomePage() {
           <h1 className="hero-h1" style={{ fontFamily: "'DM Serif Display'", fontSize: 50, lineHeight: 1.1, fontWeight: 400, margin: '0 0 28px', letterSpacing: '-.5px', color: '#4ade80' }}>
             <span className="rotate" key={current}>{VAKGEBIEDEN[current]}</span>
           </h1>
-          <p style={{ fontSize: 16, color: '#666', lineHeight: 1.75, margin: '0 0 36px', maxWidth: 420 }}>
+          <p className="hero-p" style={{ fontSize: 16, color: '#666', lineHeight: 1.75, margin: '0 0 36px', maxWidth: 420 }}>
             Brieft leest wekelijks alle officiële wetgeving, uitspraken en beleidsupdates.
             Jij krijgt alleen wat relevant is — samengevat, met bronverwijzingen.
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+          <div className="hero-cta-rij" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
             <Link href="/inschrijven" className="cta-hero" style={{ background: '#4ade80', color: '#0a0a0a', fontSize: 14, fontWeight: 700, padding: '12px 26px', borderRadius: 8, letterSpacing: '-.01em', transition: 'background .15s' }}>
               Gratis aanmelden →
             </Link>
@@ -138,7 +149,7 @@ export default function HomePage() {
             { getal: '100%', label: 'Primaire overheidsbronnen' },
           ].map((s, i) => (
             <div key={i} style={{ padding: '8px 0', borderRight: i < 2 ? '1px solid #1a1a1a' : 'none' }}>
-              <div style={{ fontFamily: "'DM Serif Display'", fontSize: 26, color: '#f0f0ee', marginBottom: 4 }}>{s.getal}</div>
+              <div className="stats-getal" style={{ fontFamily: "'DM Serif Display'", fontSize: 26, color: '#f0f0ee', marginBottom: 4 }}>{s.getal}</div>
               <div style={{ fontSize: 11, color: '#333', fontWeight: 500 }}>{s.label}</div>
             </div>
           ))}
@@ -156,9 +167,9 @@ export default function HomePage() {
 
       {/* HOE HET WERKT */}
       <section id="hoe" style={{ background: '#0d0d0d', borderBottom: '1px solid #141414' }}>
-        <div style={{ maxWidth: 1040, margin: '0 auto', padding: '72px 2rem' }}>
+        <div className="sectie-inner" style={{ maxWidth: 1040, margin: '0 auto', padding: '72px 2rem' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 16 }}>Hoe het werkt</div>
-          <div style={{ fontFamily: "'DM Serif Display'", fontSize: 32, fontWeight: 400, color: '#f0f0ee', marginBottom: 48, letterSpacing: '-.3px' }}>Van officiële bron tot jouw inbox</div>
+          <div className="sectie-kop" style={{ fontFamily: "'DM Serif Display'", fontSize: 32, fontWeight: 400, color: '#f0f0ee', marginBottom: 48, letterSpacing: '-.3px' }}>Van officiële bron tot jouw inbox</div>
           <div className="stappen-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 28 }}>
             {[
               { num: '01', title: 'Jij vult in wat relevant is', desc: 'Vakgebied, organisatietype, extra voorkeuren en hoe vaak je updates wil.' },
@@ -180,9 +191,9 @@ export default function HomePage() {
 
       {/* VAKGEBIEDEN */}
       <section id="vakgebieden" style={{ background: '#0a0a0a' }}>
-        <div style={{ maxWidth: 1040, margin: '0 auto', padding: '72px 2rem' }}>
+        <div className="sectie-inner" style={{ maxWidth: 1040, margin: '0 auto', padding: '72px 2rem' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 16 }}>Vakgebieden</div>
-          <div style={{ fontFamily: "'DM Serif Display'", fontSize: 32, fontWeight: 400, color: '#f0f0ee', marginBottom: 8, letterSpacing: '-.3px' }}>Voor elk vakgebied</div>
+          <div className="sectie-kop" style={{ fontFamily: "'DM Serif Display'", fontSize: 32, fontWeight: 400, color: '#f0f0ee', marginBottom: 8, letterSpacing: '-.3px' }}>Voor elk vakgebied</div>
           <div style={{ fontSize: 13, color: '#444', marginBottom: 32 }}>Staat jouw vakgebied er niet bij? Typ het gewoon in — Brieft bepaalt zelf welke bronnen relevant zijn.</div>
           <div className="vakgebieden-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
             {[
@@ -207,8 +218,8 @@ export default function HomePage() {
       {/* CTA */}
       <section style={{ background: '#0d0d0d', borderTop: '1px solid #141414', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, height: 200, background: 'radial-gradient(ellipse, rgba(74,222,128,.06) 0%, transparent 70%)', pointerEvents: 'none' }}></div>
-        <div style={{ maxWidth: 560, margin: '0 auto', padding: '80px 2rem', textAlign: 'center', position: 'relative' }}>
-          <div style={{ fontFamily: "'DM Serif Display'", fontSize: 34, fontWeight: 400, color: '#f0f0ee', margin: '0 0 14px', letterSpacing: '-.3px', lineHeight: 1.2 }}>
+        <div className="cta-inner" style={{ maxWidth: 560, margin: '0 auto', padding: '80px 2rem', textAlign: 'center', position: 'relative' }}>
+          <div className="cta-kop" style={{ fontFamily: "'DM Serif Display'", fontSize: 34, fontWeight: 400, color: '#f0f0ee', margin: '0 0 14px', letterSpacing: '-.3px', lineHeight: 1.2 }}>
             Klaar om bij te blijven?
           </div>
           <p style={{ fontSize: 15, color: '#555', margin: '0 0 32px', lineHeight: 1.65 }}>
