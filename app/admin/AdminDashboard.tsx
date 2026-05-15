@@ -73,7 +73,7 @@ export default function AdminDashboard() {
     setStatsLaden(true)
     fetch('/api/admin/stats')
       .then(r => r.json())
-      .then(data => { setLogRegels(data); setStatsLaden(false) })
+      .then(data => { setLogRegels(Array.isArray(data) ? data : []); setStatsLaden(false) })
       .catch(() => setStatsLaden(false))
   }, [tabblad, logRegels.length])
 

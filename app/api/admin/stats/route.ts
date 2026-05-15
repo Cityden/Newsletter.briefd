@@ -15,14 +15,26 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data, error } = await supabase
-    .from('nieuwsbrief_log')
-    .select('id, subscriber_id, onderwerp, status, created_at, subscribers(naam, email, vakgebied, frequentie)')
-    .order('created_at', { ascending: false })
+  const [{ data: logs, error: logsError }, { data: subs }] = await Promise.all([
+    supabase
+      .from('nieuwsbrief_log')
+      .select('id, subscriber_id, onderwerp, status, created_at')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('subscribers')
+      .select('id, naam, email, vakgebied, frequentie'),
+  ])
 
-  if (error) {
+  if (logsError) {
     return NextResponse.json({ error: 'Database fout' }, { status: 500 })
   }
 
-  return NextResponse.json(data ?? [])
+  const subMap = Object.fromEntries((subs ?? []).map(s => [s.id, s]))
+
+  const result = (logs ?? []).map(log => ({
+    ...log,
+    subscribers: subMap[log.subscriber_id] ?? null,
+  }))
+
+  return NextResponse.json(result)
 }
