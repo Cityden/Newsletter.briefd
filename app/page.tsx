@@ -38,9 +38,6 @@ export default function HomePage() {
           .vakgebieden-grid { grid-template-columns: repeat(2,1fr) !important; }
           .footer-flex { flex-direction: column !important; gap: 8px !important; text-align: center !important; }
         }
-        @media (max-width: 480px) {
-          .stappen-grid { grid-template-columns: 1fr !important; }
-        }
       `}</style>
 
       {/* NAV */}
