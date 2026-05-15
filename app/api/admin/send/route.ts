@@ -105,5 +105,12 @@ export async function POST(req: NextRequest) {
   }
 
   console.log(`[admin/send] Verstuurd, Resend ID: ${mailData?.id}`)
+
+  await supabase.from('nieuwsbrief_log').insert({
+    subscriber_id: abonnee.id,
+    onderwerp: resultaat.onderwerp,
+    status: 'verstuurd',
+  })
+
   return NextResponse.json({ ok: true, onderwerp: resultaat.onderwerp, aantalArtikelen: artikelen.length })
 }
