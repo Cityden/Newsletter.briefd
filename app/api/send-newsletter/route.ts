@@ -53,7 +53,10 @@ export async function GET(req: NextRequest) {
   }
 
   const eersteWeek = isEersteMaandagVanMaand()
-  const adminEmail = process.env.ADMIN_EMAIL ?? 'marijn@cityden.com'
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (!adminEmail) {
+    return NextResponse.json({ error: 'ADMIN_EMAIL niet ingesteld' }, { status: 500 })
+  }
   const emailDomein = process.env.EMAIL_DOMEIN ?? 'brieft.online'
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
 
@@ -164,7 +167,7 @@ export async function GET(req: NextRequest) {
     await stuurFoutmelding(
       `Cron job: ${fouten.length} fout${fouten.length !== 1 ? 'en' : ''} bij versturen`,
       [
-        `${verzonden.length} van ${verzonden.length + fouten.length} nieuwsbrieven verstuurd.`,
+        `${verzonden.length} van ${abonnees.length} abonnees verwerkt. ${overgeslagen.length} overgeslagen, ${fouten.length} mislukt.`,
         `<strong>Mislukt voor:</strong>`,
         ...fouten.map(f => `${f.email} — <code style="font-size:12px">${f.reden}</code>`),
       ]

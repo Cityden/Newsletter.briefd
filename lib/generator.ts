@@ -106,13 +106,13 @@ JSON-STRUCTUUR:
 }`,
       messages: [{
         role: 'user',
-        content: `Ontvanger: ${profiel.naam}
-Vakgebied: ${profiel.vakgebied}${vakgebiedContext ? ` (${vakgebiedContext})` : ''}
-${profiel.branche ? `Branche: ${profiel.branche}` : ''}
+        content: `Ontvanger: ${saniteerVoorPrompt(profiel.naam)}
+Vakgebied: ${saniteerVoorPrompt(profiel.vakgebied)}${vakgebiedContext ? ` (${vakgebiedContext})` : ''}
+${profiel.branche ? `Branche: ${saniteerVoorPrompt(profiel.branche)}` : ''}
 Organisatie: ${orgLabel[profiel.organisatie] ?? profiel.organisatie}
 ${profiel.voorkeuren ? `Schrijfstijl: ${profiel.voorkeuren.stijl === 'kort' ? 'kort en bondig, max 3 zinnen per item' : 'uitgebreid met context en achtergrond'}
 Regio focus: ${profiel.voorkeuren.regio.join(', ')}
-Extra onderwerpen om op te letten: ${profiel.voorkeuren.extraOnderwerpen || 'geen'}
+Extra onderwerpen om op te letten: ${saniteerVoorPrompt(profiel.voorkeuren.extraOnderwerpen || 'geen')}
 Alleen hoge impact: ${profiel.voorkeuren.alleenHogeImpact ? 'ja, filter laag en gemiddeld weg' : 'nee, alle relevante updates'}` : ''}
 
 Selecteer minimaal 2 items. Retourneer ALLEEN het JSON-object, geen andere tekst.
@@ -163,6 +163,11 @@ ${artikelTekst}`
 
   const html = buildHTML(parsed, profiel, beheerUrl)
   return { onderwerp: parsed.onderwerp, html }
+}
+
+function saniteerVoorPrompt(str: string): string {
+  // Verwijder newlines en voorkom prompt injection via gebruikersinput
+  return str.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200)
 }
 
 function escapeHtml(str: string): string {

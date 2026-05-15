@@ -11,8 +11,11 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
     .eq('token', token)
     .single()
 
-  if (error || !data) {
+  if (error?.code === 'PGRST116' || !data) {
     return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
+  }
+  if (error) {
+    return NextResponse.json({ error: 'Database fout' }, { status: 500 })
   }
 
   return NextResponse.json(data)

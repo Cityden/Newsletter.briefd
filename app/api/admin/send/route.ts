@@ -4,6 +4,7 @@ import { Resend } from 'resend'
 import { supabase } from '@/lib/supabase'
 import { fetchArtikelen } from '@/lib/fetcher'
 import { genereerNieuwsbrief } from '@/lib/generator'
+import { sessionToken } from '@/app/api/admin/login/route'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
@@ -11,7 +12,7 @@ async function isAuthenticated(): Promise<boolean> {
   const adminPassword = process.env.ADMIN_PASSWORD
   if (!adminPassword) return false
   const cookieStore = await cookies()
-  return cookieStore.get('admin_session')?.value === adminPassword
+  return cookieStore.get('admin_session')?.value === sessionToken(adminPassword)
 }
 
 export async function POST(req: NextRequest) {
@@ -30,8 +31,11 @@ export async function POST(req: NextRequest) {
     .eq('email', email)
     .single()
 
-  if (dbFout || !abonnee) {
+  if (dbFout?.code === 'PGRST116' || !abonnee) {
     return NextResponse.json({ error: 'Subscriber niet gevonden' }, { status: 404 })
+  }
+  if (dbFout) {
+    return NextResponse.json({ error: 'Database fout' }, { status: 500 })
   }
 
   if (!abonnee.actief) {
@@ -82,7 +86,10 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const testOntvanger = process.env.ADMIN_EMAIL ?? 'marijn@cityden.com'
+  const testOntvanger = process.env.ADMIN_EMAIL
+  if (!testOntvanger) {
+    return NextResponse.json({ error: 'ADMIN_EMAIL niet ingesteld' }, { status: 500 })
+  }
   console.log(`[admin/send] Versturen naar ${testOntvanger} (test voor ${abonnee.email}) via Resend`)
 
   const { data: mailData, error: mailFout } = await resend.emails.send({

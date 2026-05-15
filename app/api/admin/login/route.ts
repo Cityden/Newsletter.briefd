@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { createHash } from 'crypto'
+
+export function sessionToken(adminPassword: string): string {
+  return createHash('sha256').update(adminPassword + 'session').digest('hex')
+}
 
 export async function POST(req: NextRequest) {
   const { wachtwoord } = await req.json()
@@ -14,9 +19,9 @@ export async function POST(req: NextRequest) {
   }
 
   const cookieStore = await cookies()
-  cookieStore.set('admin_session', adminPassword, {
+  cookieStore.set('admin_session', sessionToken(adminPassword), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'lax',
     maxAge: 60 * 60 * 8, // 8 uur
     path: '/',
