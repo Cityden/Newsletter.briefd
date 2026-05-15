@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createHash } from 'crypto'
-
-export function sessionToken(adminPassword: string): string {
-  return createHash('sha256').update(adminPassword + 'session').digest('hex')
-}
+import { sessionToken } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   const { wachtwoord } = await req.json()

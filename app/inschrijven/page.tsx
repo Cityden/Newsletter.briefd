@@ -89,7 +89,7 @@ export default function InschrijvenPage() {
         <>
           <div style={s.stapLabel}>Stap 1 van 2</div>
           <h1 style={s.h1}>Jouw profiel</h1>
-          <p style={s.sub}>Vul in wie je bent, zodat Briefd de juiste updates kan selecteren.</p>
+          <p style={s.sub}>Vul in wie je bent, zodat Brieft de juiste updates kan selecteren.</p>
 
           <div style={s.field}>
             <label style={s.label}>Naam</label>
@@ -120,7 +120,7 @@ export default function InschrijvenPage() {
               value={form.vakgebied}
               onChange={e => setForm(f => ({ ...f, vakgebied: e.target.value }))}
             />
-            <div style={s.hint}>Vul vrij in — Briefd past zich automatisch aan</div>
+            <div style={s.hint}>Vul vrij in — Brieft past zich automatisch aan</div>
           </div>
 
           <div style={s.field}>
@@ -137,7 +137,7 @@ export default function InschrijvenPage() {
                 <option key={b} value={b}>{b}</option>
               ))}
             </select>
-            <div style={s.hint}>Briefd houdt rekening met branche-specifieke regelgeving</div>
+            <div style={s.hint}>Brieft houdt rekening met branche-specifieke regelgeving</div>
           </div>
 
           <div style={s.field}>
@@ -229,7 +229,7 @@ export default function InschrijvenPage() {
               value={form.voorkeuren.extraOnderwerpen}
               onChange={e => setForm(f => ({ ...f, voorkeuren: { ...f.voorkeuren, extraOnderwerpen: e.target.value } }))}
             />
-            <div style={s.hint}>Briefd let extra op updates die hierop aansluiten</div>
+            <div style={s.hint}>Brieft let extra op updates die hierop aansluiten</div>
           </div>
 
           <div style={s.field}>
@@ -277,7 +277,7 @@ function Pagina({ children, stap }: { children: React.ReactNode; stap: number })
       <nav style={{ width: '100%', borderBottom: '1px solid #1a1a1a', padding: '0 2rem', marginBottom: 48 }}>
         <div style={{ maxWidth: 480, margin: '0 auto', height: 56, display: 'flex', alignItems: 'center' }}>
           <Link href="/" style={{ fontFamily: "'DM Serif Display'", fontSize: 18, color: '#e8e8e6', letterSpacing: '-.2px', textDecoration: 'none' }}>
-            ◈ Briefd
+            ◈ Brieft
           </Link>
         </div>
       </nav>

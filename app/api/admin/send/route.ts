@@ -4,7 +4,7 @@ import { Resend } from 'resend'
 import { supabase } from '@/lib/supabase'
 import { fetchArtikelen } from '@/lib/fetcher'
 import { genereerNieuwsbrief } from '@/lib/generator'
-import { sessionToken } from '@/app/api/admin/login/route'
+import { sessionToken } from '@/lib/auth'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 

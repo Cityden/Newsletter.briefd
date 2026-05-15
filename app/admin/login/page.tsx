@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
       <nav style={{ width: '100%', borderBottom: '1px solid #1a1a1a', padding: '0 2rem', marginBottom: 64 }}>
         <div style={{ maxWidth: 420, margin: '0 auto', height: 56, display: 'flex', alignItems: 'center' }}>
           <Link href="/" style={{ fontFamily: "'DM Serif Display'", fontSize: 18, color: '#e8e8e6', textDecoration: 'none', letterSpacing: '-.2px' }}>
-            ◈ Briefd
+            ◈ Brieft
           </Link>
         </div>
       </nav>

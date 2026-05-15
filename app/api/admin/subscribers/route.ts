@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { supabase } from '@/lib/supabase'
-import { sessionToken } from '@/app/api/admin/login/route'
+import { sessionToken } from '@/lib/auth'
 
 async function isAuthenticated(): Promise<boolean> {
   const adminPassword = process.env.ADMIN_PASSWORD

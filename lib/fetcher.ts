@@ -49,7 +49,7 @@ function parseAtom(xml: string, bronnaam: string): Artikel[] {
 async function fetchFeed(url: string, bronnaam: string): Promise<Artikel[]> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Briefd-Nieuwsbrief/1.0 (+https://briefd.nl)' },
+      headers: { 'User-Agent': 'Brieft-Nieuwsbrief/1.0 (+https://brieft.online)' },
       signal: AbortSignal.timeout(10000),
     })
     if (!res.ok) {

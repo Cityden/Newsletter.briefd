@@ -33,7 +33,7 @@ export default function HomePage() {
       {/* NAV */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(10,10,10,.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #1a1a1a', padding: '0 2rem' }}>
         <div style={{ maxWidth: 1040, margin: '0 auto', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: "'DM Serif Display'", fontSize: 20, color: '#e8e8e6', letterSpacing: '-.2px' }}>◈ Briefd</span>
+          <span style={{ fontFamily: "'DM Serif Display'", fontSize: 20, color: '#e8e8e6', letterSpacing: '-.2px' }}>◈ Brieft</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
             <a href="#hoe" className="nav-link" style={{ fontSize: 13, color: '#555', fontWeight: 500, transition: 'color .15s' }}>Hoe het werkt</a>
             <a href="#vakgebieden" className="nav-link" style={{ fontSize: 13, color: '#555', fontWeight: 500, transition: 'color .15s' }}>Vakgebieden</a>
@@ -58,7 +58,7 @@ export default function HomePage() {
             <span className="rotate" key={current}>{VAKGEBIEDEN[current]}</span>
           </h1>
           <p style={{ fontSize: 16, color: '#666', lineHeight: 1.75, margin: '0 0 36px', maxWidth: 420 }}>
-            Briefd leest wekelijks alle officiële wetgeving, uitspraken en beleidsupdates.
+            Brieft leest wekelijks alle officiële wetgeving, uitspraken en beleidsupdates.
             Jij krijgt alleen wat relevant is — samengevat, met bronverwijzingen.
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
@@ -78,7 +78,7 @@ export default function HomePage() {
         <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 14, padding: 22, boxShadow: '0 0 0 1px rgba(74,222,128,.05), 0 24px 48px rgba(0,0,0,.5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', animation: 'pulse 2s ease-in-out infinite' }}></div>
-            <span style={{ fontSize: 11, color: '#444', fontWeight: 500 }}>Briefd · jouw vakgebied · week 17</span>
+            <span style={{ fontSize: 11, color: '#444', fontWeight: 500 }}>Brieft · jouw vakgebied · week 17</span>
             <span style={{ marginLeft: 'auto', background: 'rgba(74,222,128,.08)', border: '1px solid rgba(74,222,128,.12)', color: '#4ade80', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>2 updates</span>
           </div>
           <div style={{ borderTop: '1px solid #1a1a1a', margin: '0 0 14px' }}></div>
@@ -152,7 +152,7 @@ export default function HomePage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 28 }}>
             {[
               { num: '01', title: 'Jij vult in wat relevant is', desc: 'Vakgebied, organisatietype, extra voorkeuren en hoe vaak je updates wil.' },
-              { num: '02', title: 'Briefd leest de bronnen', desc: 'Staatscourant, rechtspraak.nl, toezichthouders — alleen primaire overheidsbronnen.' },
+              { num: '02', title: 'Brieft leest de bronnen', desc: 'Staatscourant, rechtspraak.nl, toezichthouders — alleen primaire overheidsbronnen.' },
               { num: '03', title: 'AI filtert en schrijft', desc: 'Relevante updates samengevat met praktijkvoorbeelden afgestemd op jouw profiel.' },
               { num: '04', title: 'Jij leest in 5 minuten', desc: 'Kort overzicht in je inbox. Klik door voor het volledige detail en de bronlink.' },
             ].map(step => (
@@ -173,7 +173,7 @@ export default function HomePage() {
         <div style={{ maxWidth: 1040, margin: '0 auto', padding: '72px 2rem' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 16 }}>Vakgebieden</div>
           <div style={{ fontFamily: "'DM Serif Display'", fontSize: 32, fontWeight: 400, color: '#f0f0ee', marginBottom: 8, letterSpacing: '-.3px' }}>Voor elk vakgebied</div>
-          <div style={{ fontSize: 13, color: '#444', marginBottom: 32 }}>Staat jouw vakgebied er niet bij? Typ het gewoon in — Briefd bepaalt zelf welke bronnen relevant zijn.</div>
+          <div style={{ fontSize: 13, color: '#444', marginBottom: 32 }}>Staat jouw vakgebied er niet bij? Typ het gewoon in — Brieft bepaalt zelf welke bronnen relevant zijn.</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
             {[
               { naam: 'Fiscaal', bronnen: 'Belastingdienst · Staatscourant · Rechtspraak' },
@@ -183,7 +183,7 @@ export default function HomePage() {
               { naam: 'Privacy & AVG', bronnen: 'Autoriteit Persoonsgegevens · EUR-Lex' },
               { naam: 'IT & Cybersecurity', bronnen: 'NCSC · AP · ACM' },
               { naam: 'ESG & Duurzaamheid', bronnen: 'AFM · RVO · EUR-Lex' },
-              { naam: 'Jouw vakgebied…', bronnen: 'Briefd zoekt automatisch de juiste bronnen', italic: true },
+              { naam: 'Jouw vakgebied…', bronnen: 'Brieft zoekt automatisch de juiste bronnen', italic: true },
             ].map((v, i) => (
               <div key={i} className="vak-card" style={{ background: '#0e0e0e', border: '1px solid #1a1a1a', borderRadius: 10, padding: '16px 18px', transition: 'border-color .15s' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: v.italic ? '#2a2a2a' : '#d8d8d6', marginBottom: 5, fontStyle: v.italic ? 'italic' : 'normal' }}>{v.naam}</div>
@@ -218,7 +218,7 @@ export default function HomePage() {
       {/* FOOTER */}
       <footer style={{ background: '#050505', borderTop: '1px solid #0f0f0f', padding: '24px 2rem' }}>
         <div style={{ maxWidth: 1040, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontFamily: "'DM Serif Display'", fontSize: 17, color: '#2a2a2a' }}>◈ Briefd</span>
+          <span style={{ fontFamily: "'DM Serif Display'", fontSize: 17, color: '#2a2a2a' }}>◈ Brieft</span>
           <span style={{ fontSize: 11, color: '#2a2a2a' }}>Alleen officiële Nederlandse en EU-bronnen</span>
         </div>
       </footer>

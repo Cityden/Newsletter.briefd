@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   // Verstuur de testmail
   const { error } = await resend.emails.send({
-    from: `Briefd Test <newsletter@${process.env.EMAIL_DOMEIN}>`,
+    from: `Brieft Test <newsletter@${process.env.EMAIL_DOMEIN}>`,
     to: email,
     subject: `[TEST] ${resultaat.onderwerp}`,
     html: resultaat.html,
