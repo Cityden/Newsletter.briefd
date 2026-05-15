@@ -330,7 +330,7 @@ export default function AdminDashboard() {
                               {sub.actief && (
                                 <div>
                                   {/* Bestemming toggle */}
-                                  <div style={{ display: 'flex', marginBottom: 6, background: '#141414', borderRadius: 8, padding: 3, border: '1px solid #222' }}>
+                                  <div style={{ display: 'flex', marginBottom: 10, background: '#141414', borderRadius: 8, padding: 4, border: '1px solid #222' }}>
                                     {(['admin', 'subscriber', 'beide'] as const).map(opt => {
                                       const labels = { admin: 'Ikzelf', subscriber: 'Abonnee', beide: 'Beide' }
                                       const actief = (sendBestemming[sub.email] ?? 'admin') === opt
@@ -338,7 +338,7 @@ export default function AdminDashboard() {
                                         <button
                                           key={opt}
                                           onClick={() => setSendBestemming(s => ({ ...s, [sub.email]: opt }))}
-                                          style={{ flex: 1, fontSize: 11, fontWeight: 600, padding: '5px 0', borderRadius: 5, border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s', background: actief ? '#4ade80' : 'transparent', color: actief ? '#0a0a0a' : '#555' }}
+                                          style={{ flex: 1, fontSize: 11, fontWeight: 600, padding: '7px 4px', borderRadius: 5, border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s', background: actief ? '#4ade80' : 'transparent', color: actief ? '#0a0a0a' : '#555' }}
                                         >
                                           {labels[opt]}
                                         </button>
