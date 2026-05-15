@@ -54,6 +54,7 @@ export default function AdminDashboard() {
   const [fout, setFout] = useState('')
   const [sendStatus, setSendStatus] = useState<Record<string, SendStatus>>({})
   const [sendDetail, setSendDetail] = useState<Record<string, string>>({})
+  const [sendBestemming, setSendBestemming] = useState<Record<string, 'admin' | 'subscriber' | 'beide'>>({})
 
   useEffect(() => {
     fetch('/api/admin/subscribers')
@@ -80,11 +81,12 @@ export default function AdminDashboard() {
   async function verstuurNieuwsbrief(email: string) {
     setSendStatus(s => ({ ...s, [email]: 'laden' }))
     setSendDetail(s => ({ ...s, [email]: '' }))
+    const bestemming = sendBestemming[email] ?? 'admin'
 
     const res = await fetch('/api/admin/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, bestemming }),
     })
     const body = await res.json()
 
@@ -327,9 +329,25 @@ export default function AdminDashboard() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                               {sub.actief && (
                                 <div>
+                                  {/* Bestemming toggle */}
+                                  <div style={{ display: 'flex', gap: 2, marginBottom: 6, background: '#0e0e0e', borderRadius: 6, padding: 2, border: '1px solid #1e1e1e' }}>
+                                    {(['admin', 'subscriber', 'beide'] as const).map(opt => {
+                                      const labels = { admin: 'Ikzelf', subscriber: 'Abonnee', beide: 'Beide' }
+                                      const actief = (sendBestemming[sub.email] ?? 'admin') === opt
+                                      return (
+                                        <button
+                                          key={opt}
+                                          onClick={() => setSendBestemming(s => ({ ...s, [sub.email]: opt }))}
+                                          style={{ flex: 1, fontSize: 10, fontWeight: 600, padding: '4px 0', borderRadius: 4, border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s', background: actief ? '#1e1e1e' : 'transparent', color: actief ? '#e8e8e6' : '#333' }}
+                                        >
+                                          {labels[opt]}
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
                                   <button
                                     style={{
-                                      fontSize: 11, fontWeight: 700, padding: '6px 14px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
+                                      fontSize: 11, fontWeight: 700, padding: '6px 14px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', width: '100%',
                                       opacity: status === 'laden' ? 0.5 : 1,
                                       background: status === 'succes' ? 'rgba(74,222,128,.1)' : status === 'fout' ? 'rgba(248,113,113,.1)' : status === 'geen-updates' ? '#181818' : '#4ade80',
                                       color: status === 'succes' ? '#4ade80' : status === 'fout' ? '#f87171' : status === 'geen-updates' ? '#444' : '#0a0a0a',

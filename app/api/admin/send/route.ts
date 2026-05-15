@@ -20,9 +20,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { email } = await req.json()
+  const { email, bestemming = 'admin' } = await req.json()
   if (!email) {
     return NextResponse.json({ error: 'E-mailadres vereist' }, { status: 400 })
+  }
+  if (!['admin', 'subscriber', 'beide'].includes(bestemming)) {
+    return NextResponse.json({ error: 'Ongeldige bestemming' }, { status: 400 })
   }
 
   const { data: abonnee, error: dbFout } = await supabase
@@ -86,25 +89,43 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const testOntvanger = process.env.ADMIN_EMAIL
-  if (!testOntvanger) {
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (!adminEmail) {
     return NextResponse.json({ error: 'ADMIN_EMAIL niet ingesteld' }, { status: 500 })
   }
-  console.log(`[admin/send] Versturen naar ${testOntvanger} (test voor ${abonnee.email}) via Resend`)
 
-  const { data: mailData, error: mailFout } = await resend.emails.send({
-    from: `Regelgeving Nieuwsbrief <newsletter@${emailDomein}>`,
-    to: testOntvanger,
-    subject: `[TEST voor ${abonnee.naam}] ${resultaat.onderwerp}`,
-    html: resultaat.html,
-  })
+  const verzendingen: Promise<{ error: unknown }>[] = []
 
+  if (bestemming === 'admin' || bestemming === 'beide') {
+    verzendingen.push(
+      resend.emails.send({
+        from: `Regelgeving Nieuwsbrief <newsletter@${emailDomein}>`,
+        to: adminEmail,
+        subject: `[TEST voor ${abonnee.naam}] ${resultaat.onderwerp}`,
+        html: resultaat.html,
+      })
+    )
+  }
+
+  if (bestemming === 'subscriber' || bestemming === 'beide') {
+    verzendingen.push(
+      resend.emails.send({
+        from: `Regelgeving Nieuwsbrief <newsletter@${emailDomein}>`,
+        to: abonnee.email,
+        subject: resultaat.onderwerp,
+        html: resultaat.html,
+      })
+    )
+  }
+
+  const resultaten = await Promise.all(verzendingen)
+  const mailFout = resultaten.find(r => r.error)?.error
   if (mailFout) {
     console.error(`[admin/send] Resend fout:`, JSON.stringify(mailFout))
     return NextResponse.json({ error: 'Versturen mislukt', detail: mailFout }, { status: 500 })
   }
 
-  console.log(`[admin/send] Verstuurd, Resend ID: ${mailData?.id}`)
+  console.log(`[admin/send] Verstuurd naar: ${bestemming}`)
 
   await supabase.from('nieuwsbrief_log').insert({
     subscriber_id: abonnee.id,
