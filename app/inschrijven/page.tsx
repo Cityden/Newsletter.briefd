@@ -83,7 +83,10 @@ export default function InschrijvenPage() {
 
   return (
     <Pagina stap={stap}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
+        @media (max-width: 480px) { .inschrijven-card { padding: 24px 20px !important; } }
+      `}</style>
 
       {stap === 1 && (
         <>
@@ -283,7 +286,7 @@ function Pagina({ children, stap }: { children: React.ReactNode; stap: number })
       </nav>
 
       {/* Card */}
-      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 16, padding: '36px 40px', maxWidth: 480, width: '100%', boxShadow: '0 24px 48px rgba(0,0,0,.4)' }}>
+      <div className="inschrijven-card" style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 16, padding: '36px 40px', maxWidth: 480, width: '100%', boxShadow: '0 24px 48px rgba(0,0,0,.4)' }}>
 
         {/* Progress bar */}
         {stap > 0 && (

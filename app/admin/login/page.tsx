@@ -27,7 +27,10 @@ export default function AdminLoginPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', fontFamily: "'DM Sans', sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
+        @media (max-width: 480px) { .login-card { padding: 24px 20px !important; } }
+      `}</style>
 
       {/* Nav */}
       <nav style={{ width: '100%', borderBottom: '1px solid #1a1a1a', padding: '0 2rem', marginBottom: 64 }}>
@@ -39,7 +42,7 @@ export default function AdminLoginPage() {
       </nav>
 
       {/* Card */}
-      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 16, padding: '36px 40px', maxWidth: 420, width: 'calc(100% - 2rem)', boxShadow: '0 24px 48px rgba(0,0,0,.4)' }}>
+      <div className="login-card" style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 16, padding: '36px 40px', maxWidth: 420, width: 'calc(100% - 2rem)', boxShadow: '0 24px 48px rgba(0,0,0,.4)' }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 10 }}>Beheer</div>
         <h1 style={{ fontFamily: "'DM Serif Display'", fontSize: 26, fontWeight: 400, color: '#f0f0ee', margin: '0 0 8px', letterSpacing: '-.3px' }}>Admin</h1>
         <p style={{ fontSize: 14, color: '#555', lineHeight: 1.65, margin: '0 0 28px' }}>Voer het beheerderswachtwoord in om verder te gaan.</p>

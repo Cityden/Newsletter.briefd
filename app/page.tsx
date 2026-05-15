@@ -28,6 +28,19 @@ export default function HomePage() {
         .nav-link:hover { color: #e8e8e6 !important; }
         .vak-card:hover { border-color: #2a2a2a !important; }
         .cta-hero:hover { background: #86efac !important; }
+        @media (max-width: 768px) {
+          .hero-section { grid-template-columns: 1fr !important; padding: 40px 1.25rem 32px !important; }
+          .preview-card { display: none !important; }
+          .hero-h1 { font-size: 36px !important; }
+          .stats-bar-grid { grid-template-columns: 1fr !important; }
+          .stats-bar-grid > div { border-right: none !important; border-bottom: 1px solid #1a1a1a; }
+          .stappen-grid { grid-template-columns: repeat(2,1fr) !important; gap: 20px !important; }
+          .vakgebieden-grid { grid-template-columns: repeat(2,1fr) !important; }
+          .footer-flex { flex-direction: column !important; gap: 8px !important; text-align: center !important; }
+        }
+        @media (max-width: 480px) {
+          .stappen-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       {/* NAV */}
@@ -45,16 +58,16 @@ export default function HomePage() {
       </nav>
 
       {/* HERO */}
-      <section style={{ maxWidth: 1040, margin: '0 auto', padding: '72px 2rem 56px', display: 'grid', gridTemplateColumns: '1fr 420px', gap: 56, alignItems: 'center', opacity: visible ? 1 : 0, transition: 'opacity .6s' }}>
+      <section className="hero-section" style={{ maxWidth: 1040, margin: '0 auto', padding: '72px 2rem 56px', display: 'grid', gridTemplateColumns: '1fr 420px', gap: 56, alignItems: 'center', opacity: visible ? 1 : 0, transition: 'opacity .6s' }}>
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(74,222,128,.08)', border: '1px solid rgba(74,222,128,.18)', color: '#4ade80', fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 20, marginBottom: 24, letterSpacing: '.04em' }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 2s ease-in-out infinite' }}></span>
             AI-gestuurde regelgeving updates
           </div>
-          <h1 style={{ fontFamily: "'DM Serif Display'", fontSize: 50, lineHeight: 1.1, fontWeight: 400, margin: '0 0 4px', letterSpacing: '-.5px', color: '#f0f0ee' }}>
+          <h1 className="hero-h1" style={{ fontFamily: "'DM Serif Display'", fontSize: 50, lineHeight: 1.1, fontWeight: 400, margin: '0 0 4px', letterSpacing: '-.5px', color: '#f0f0ee' }}>
             Altijd op de hoogte van
           </h1>
-          <h1 style={{ fontFamily: "'DM Serif Display'", fontSize: 50, lineHeight: 1.1, fontWeight: 400, margin: '0 0 28px', letterSpacing: '-.5px', color: '#4ade80' }}>
+          <h1 className="hero-h1" style={{ fontFamily: "'DM Serif Display'", fontSize: 50, lineHeight: 1.1, fontWeight: 400, margin: '0 0 28px', letterSpacing: '-.5px', color: '#4ade80' }}>
             <span className="rotate" key={current}>{VAKGEBIEDEN[current]}</span>
           </h1>
           <p style={{ fontSize: 16, color: '#666', lineHeight: 1.75, margin: '0 0 36px', maxWidth: 420 }}>
@@ -75,7 +88,7 @@ export default function HomePage() {
         </div>
 
         {/* Preview card */}
-        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 14, padding: 22, boxShadow: '0 0 0 1px rgba(74,222,128,.05), 0 24px 48px rgba(0,0,0,.5)' }}>
+        <div className="preview-card" style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 14, padding: 22, boxShadow: '0 0 0 1px rgba(74,222,128,.05), 0 24px 48px rgba(0,0,0,.5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', animation: 'pulse 2s ease-in-out infinite' }}></div>
             <span style={{ fontSize: 11, color: '#444', fontWeight: 500 }}>Brieft · jouw vakgebied · week 17</span>
@@ -121,7 +134,7 @@ export default function HomePage() {
 
       {/* STATS BAR */}
       <div style={{ borderTop: '1px solid #141414', borderBottom: '1px solid #141414', background: '#0d0d0d' }}>
-        <div style={{ maxWidth: 1040, margin: '0 auto', padding: '20px 2rem', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', textAlign: 'center' }}>
+        <div className="stats-bar-grid" style={{ maxWidth: 1040, margin: '0 auto', padding: '20px 2rem', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', textAlign: 'center' }}>
           {[
             { getal: '30+', label: 'Officiële bronnen gemonitord' },
             { getal: 'Wekelijks', label: 'Elke maandag bijgewerkt' },
@@ -149,7 +162,7 @@ export default function HomePage() {
         <div style={{ maxWidth: 1040, margin: '0 auto', padding: '72px 2rem' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 16 }}>Hoe het werkt</div>
           <div style={{ fontFamily: "'DM Serif Display'", fontSize: 32, fontWeight: 400, color: '#f0f0ee', marginBottom: 48, letterSpacing: '-.3px' }}>Van officiële bron tot jouw inbox</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 28 }}>
+          <div className="stappen-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 28 }}>
             {[
               { num: '01', title: 'Jij vult in wat relevant is', desc: 'Vakgebied, organisatietype, extra voorkeuren en hoe vaak je updates wil.' },
               { num: '02', title: 'Brieft leest de bronnen', desc: 'Staatscourant, rechtspraak.nl, toezichthouders — alleen primaire overheidsbronnen.' },
@@ -174,7 +187,7 @@ export default function HomePage() {
           <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 16 }}>Vakgebieden</div>
           <div style={{ fontFamily: "'DM Serif Display'", fontSize: 32, fontWeight: 400, color: '#f0f0ee', marginBottom: 8, letterSpacing: '-.3px' }}>Voor elk vakgebied</div>
           <div style={{ fontSize: 13, color: '#444', marginBottom: 32 }}>Staat jouw vakgebied er niet bij? Typ het gewoon in — Brieft bepaalt zelf welke bronnen relevant zijn.</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+          <div className="vakgebieden-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
             {[
               { naam: 'Fiscaal', bronnen: 'Belastingdienst · Staatscourant · Rechtspraak' },
               { naam: 'Finance', bronnen: 'AFM · DNB · EUR-Lex' },
@@ -217,7 +230,7 @@ export default function HomePage() {
 
       {/* FOOTER */}
       <footer style={{ background: '#050505', borderTop: '1px solid #0f0f0f', padding: '24px 2rem' }}>
-        <div style={{ maxWidth: 1040, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="footer-flex" style={{ maxWidth: 1040, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontFamily: "'DM Serif Display'", fontSize: 17, color: '#2a2a2a' }}>◈ Brieft</span>
           <span style={{ fontSize: 11, color: '#2a2a2a' }}>Alleen officiële Nederlandse en EU-bronnen</span>
         </div>
