@@ -278,7 +278,7 @@ export default function AdminDashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr>
-                      {['Naam', 'E-mail', 'Vakgebied', 'Branche', 'Frequentie', 'Aangemeld', 'Laatste mail', 'Status', 'Actie'].map(kol => (
+                      {['Naam', 'E-mail', 'Vakgebied', 'Branche', 'Frequentie', 'Datums', 'Actie'].map(kol => (
                         <th key={kol} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: '#333', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid #1a1a1a', whiteSpace: 'nowrap' }}>
                           {kol}
                         </th>
@@ -313,17 +313,9 @@ export default function AdminDashboard() {
                               {sub.frequentie}
                             </span>
                           </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#333', fontSize: 12, whiteSpace: 'nowrap' }}>{formatDatum(sub.aangemeld_op)}</td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#333', fontSize: 12, whiteSpace: 'nowrap' }}>{formatDatum(sub.laatste_mail_op)}</td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
-                            <span style={{
-                              display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
-                              background: sub.actief ? 'rgba(74,222,128,.08)' : 'rgba(255,255,255,.03)',
-                              border: sub.actief ? '1px solid rgba(74,222,128,.2)' : '1px solid #1e1e1e',
-                              color: sub.actief ? '#4ade80' : '#333',
-                            }}>
-                              {sub.actief ? 'Actief' : 'Uitgeschreven'}
-                            </span>
+                          <td style={{ padding: '10px 16px', borderBottom: '1px solid #141414', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: 11, color: '#444' }}>↗ {formatDatum(sub.aangemeld_op)}</div>
+                            <div style={{ fontSize: 11, color: sub.laatste_mail_op ? '#4ade80' : '#2a2a2a', marginTop: 3 }}>✉ {formatDatum(sub.laatste_mail_op)}</div>
                           </td>
                           <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -382,7 +374,7 @@ export default function AdminDashboard() {
                     })}
                     {!laden && subscribers.length === 0 && (
                       <tr>
-                        <td colSpan={9} style={{ padding: '40px 16px', textAlign: 'center', color: '#2a2a2a', fontSize: 13 }}>
+                        <td colSpan={7} style={{ padding: '40px 16px', textAlign: 'center', color: '#2a2a2a', fontSize: 13 }}>
                           Nog geen subscribers aangemeld.
                         </td>
                       </tr>

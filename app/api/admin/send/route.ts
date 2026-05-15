@@ -127,11 +127,16 @@ export async function POST(req: NextRequest) {
 
   console.log(`[admin/send] Verstuurd naar: ${bestemming}`)
 
-  await supabase.from('nieuwsbrief_log').insert({
-    subscriber_id: abonnee.id,
-    onderwerp: resultaat.onderwerp,
-    status: 'verstuurd',
-  })
+  await Promise.all([
+    supabase.from('nieuwsbrief_log').insert({
+      subscriber_id: abonnee.id,
+      onderwerp: resultaat.onderwerp,
+      status: 'verstuurd',
+    }),
+    supabase.from('subscribers')
+      .update({ laatste_mail_op: new Date().toISOString() })
+      .eq('id', abonnee.id),
+  ])
 
   return NextResponse.json({ ok: true, onderwerp: resultaat.onderwerp, aantalArtikelen: artikelen.length })
 }
