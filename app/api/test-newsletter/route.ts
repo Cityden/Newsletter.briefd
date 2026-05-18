@@ -18,15 +18,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'email en vakgebied zijn verplicht' }, { status: 400 })
   }
 
-  // Zoek subscriber op of gebruik testprofiel
+  // Zoek subscriber op voor naam/token, maar testparameters hebben altijd voorrang
   const { data: sub } = await supabase
     .from('subscribers')
-    .select('*')
+    .select('naam, token')
     .eq('email', email)
     .single()
 
-  const profiel = sub ?? {
-    naam: 'Test ontvanger',
+  const profiel = {
+    naam: sub?.naam ?? 'Test ontvanger',
     email,
     vakgebied,
     organisatie: organisatie ?? 'mkb',
@@ -34,15 +34,32 @@ export async function POST(req: NextRequest) {
     land: land ?? 'NL',
     voorkeuren: voorkeuren ?? null,
     bronnen: [],
-    token: 'test-token',
+    token: sub?.token ?? 'test-token',
   }
 
   // Altijd vers ophalen bij test, zodat nieuwe params direct zichtbaar zijn
   const { getBronnen } = await import('@/lib/sources')
-  const bronnen = await getBronnen(profiel.vakgebied, {
-    branche: profiel.branche ?? undefined,
-    extraOnderwerpen: profiel.voorkeuren?.extraOnderwerpen ?? undefined,
-    land: profiel.land ?? 'NL',
+
+  // Ondersteuning voor meerdere vakgebieden (bijv. "finance, marketing" of "finance en marketing")
+  const vakgebieden = vakgebied
+    .split(/[,\s]+(?:en|and|&)?\s*|,/)
+    .map((v: string) => v.trim())
+    .filter((v: string) => v.length > 0)
+
+  const bronnenSets = await Promise.all(
+    vakgebieden.map((vak: string) => getBronnen(vak, {
+      branche: profiel.branche ?? undefined,
+      extraOnderwerpen: profiel.voorkeuren?.extraOnderwerpen ?? undefined,
+      land: profiel.land ?? 'NL',
+    }))
+  )
+
+  // Dedupliceer bronnen over alle vakgebieden
+  const seenUrls = new Set<string>()
+  const bronnen = bronnenSets.flat().filter(b => {
+    if (seenUrls.has(b.url)) return false
+    seenUrls.add(b.url)
+    return true
   })
 
   if (!bronnen.length) {
@@ -59,7 +76,7 @@ export async function POST(req: NextRequest) {
   const beheerUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/voorkeuren?token=${profiel.token}`
   const resultaat = await genereerNieuwsbrief(artikelen, {
     naam: profiel.naam,
-    vakgebied: profiel.vakgebied,
+    vakgebied: vakgebieden.join(' & '),
     branche: profiel.branche ?? undefined,
     organisatie: profiel.organisatie,
     land: profiel.land ?? 'NL',
