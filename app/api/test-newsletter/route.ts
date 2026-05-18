@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Niet toegestaan' }, { status: 401 })
   }
 
-  const { email, vakgebied, organisatie, voorkeuren } = await req.json()
+  const { email, vakgebied, organisatie, branche, land, voorkeuren } = await req.json()
 
   if (!email || !vakgebied) {
     return NextResponse.json({ error: 'email en vakgebied zijn verplicht' }, { status: 400 })
@@ -30,27 +30,41 @@ export async function POST(req: NextRequest) {
     email,
     vakgebied,
     organisatie: organisatie ?? 'mkb',
+    branche: branche ?? null,
+    land: land ?? 'NL',
     voorkeuren: voorkeuren ?? null,
     bronnen: [],
     token: 'test-token',
   }
 
-  // Gebruik bestaande bronnen of haal nieuwe op
-  let bronnen = profiel.bronnen ?? []
+  // Altijd vers ophalen bij test, zodat nieuwe params direct zichtbaar zijn
+  const { getBronnen } = await import('@/lib/sources')
+  const bronnen = await getBronnen(profiel.vakgebied, {
+    branche: profiel.branche ?? undefined,
+    extraOnderwerpen: profiel.voorkeuren?.extraOnderwerpen ?? undefined,
+    land: profiel.land ?? 'NL',
+  })
+
   if (!bronnen.length) {
-    const { getBronnen } = await import('@/lib/sources')
-    bronnen = await getBronnen(vakgebied)
+    return NextResponse.json({ error: 'Geen bronnen gevonden voor dit vakgebied en land. Probeer een ander vakgebied of controleer of de Claude API bereikbaar is.', bronnen: [] }, { status: 404 })
   }
 
   // Haal artikelen op van afgelopen 30 dagen (ruimer voor test)
   const artikelen = await fetchArtikelen(bronnen, 30)
 
   if (!artikelen.length) {
-    return NextResponse.json({ error: 'Geen artikelen gevonden voor dit vakgebied', bronnen }, { status: 404 })
+    return NextResponse.json({ error: 'Bronnen gevonden maar geen recente artikelen opgehaald. De feeds zijn mogelijk tijdelijk onbereikbaar.', bronnen: bronnen.map(b => b.naam) }, { status: 404 })
   }
 
   const beheerUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/voorkeuren?token=${profiel.token}`
-  const resultaat = await genereerNieuwsbrief(artikelen, profiel, beheerUrl)
+  const resultaat = await genereerNieuwsbrief(artikelen, {
+    naam: profiel.naam,
+    vakgebied: profiel.vakgebied,
+    branche: profiel.branche ?? undefined,
+    organisatie: profiel.organisatie,
+    land: profiel.land ?? 'NL',
+    voorkeuren: profiel.voorkeuren ?? undefined,
+  }, beheerUrl)
 
   if (!resultaat) {
     return NextResponse.json({ error: 'Claude vond geen relevante updates in de gevonden artikelen', aantalArtikelen: artikelen.length }, { status: 404 })
@@ -72,6 +86,7 @@ export async function POST(req: NextRequest) {
     success: true,
     onderwerp: resultaat.onderwerp,
     aantalArtikelen: artikelen.length,
+    bronnen: bronnen.map(b => b.naam),
     email,
   })
 }

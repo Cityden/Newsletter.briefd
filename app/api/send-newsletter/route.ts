@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
   const { data: abonnees, error: dbFout } = await supabase
     .from('subscribers')
-    .select('id, naam, email, vakgebied, branche, organisatie, frequentie, bronnen, bronnen_gegenereerd_op, token, voorkeuren')
+    .select('id, naam, email, vakgebied, branche, organisatie, frequentie, bronnen, bronnen_gegenereerd_op, token, voorkeuren, land')
     .eq('actief', true)
 
   if (dbFout || !abonnees) {
@@ -95,7 +95,11 @@ export async function GET(req: NextRequest) {
 
       if (bronnen.length === 0 || bronnenVerouderd) {
         console.log(`[cron] Bronnen regenereren voor ${abonnee.email}`)
-        bronnen = await getBronnen(abonnee.vakgebied)
+        bronnen = await getBronnen(abonnee.vakgebied, {
+          branche: abonnee.branche ?? undefined,
+          extraOnderwerpen: abonnee.voorkeuren?.extraOnderwerpen ?? undefined,
+          land: abonnee.land ?? 'NL',
+        })
         if (bronnen.length > 0) {
           await supabase.from('subscribers').update({
             bronnen,
@@ -120,6 +124,7 @@ export async function GET(req: NextRequest) {
           vakgebied: abonnee.vakgebied,
           branche: abonnee.branche ?? undefined,
           organisatie: abonnee.organisatie,
+          land: abonnee.land ?? 'NL',
           voorkeuren: abonnee.voorkeuren ?? undefined,
         },
         beheerUrl
@@ -130,11 +135,11 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      // Verstuur naar admin — die stuurt door naar subscriber
+      // Verstuur naar subscriber
       const { error: mailFout } = await resend.emails.send({
         from: `Regelgeving Nieuwsbrief <newsletter@${emailDomein}>`,
-        to: adminEmail,
-        subject: `[${abonnee.naam}] ${resultaat.onderwerp}`,
+        to: abonnee.email,
+        subject: resultaat.onderwerp,
         html: resultaat.html,
       })
 
@@ -154,7 +159,7 @@ export async function GET(req: NextRequest) {
         .eq('id', abonnee.id)
 
       verzonden.push(abonnee.email)
-      console.log(`[cron] Verstuurd voor ${abonnee.email} → ${adminEmail}`)
+      console.log(`[cron] Verstuurd naar ${abonnee.email}`)
 
     } catch (err) {
       const reden = err instanceof Error ? err.message : String(err)

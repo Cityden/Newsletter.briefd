@@ -163,6 +163,38 @@ export default function AdminDashboard() {
     return new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
+  function eersteMandag(jaar: number, maand: number): Date {
+    const d = new Date(jaar, maand, 1)
+    const dag = d.getDay()
+    const offset = dag === 1 ? 0 : (8 - dag) % 7
+    d.setDate(1 + offset)
+    return d
+  }
+
+  function volgendeMailDatum(sub: Subscriber): Date | null {
+    if (!sub.actief) return null
+    const nu = new Date()
+
+    if (sub.frequentie === 'wekelijks') {
+      const dag = nu.getDay()
+      const daysUntilMonday = (1 - dag + 7) % 7 || 7
+      const volgende = new Date(nu)
+      volgende.setDate(nu.getDate() + daysUntilMonday)
+      return volgende
+    }
+
+    if (sub.frequentie === 'maandelijks') {
+      const dezeMaand = eersteMandag(nu.getFullYear(), nu.getMonth())
+      if (dezeMaand > nu) return dezeMaand
+      let jaar = nu.getFullYear()
+      let maand = nu.getMonth() + 1
+      if (maand > 11) { maand = 0; jaar++ }
+      return eersteMandag(jaar, maand)
+    }
+
+    return null
+  }
+
   function formatBedrag(eur: number) {
     return `€\u00A0${eur.toFixed(2)}`
   }
@@ -316,6 +348,12 @@ export default function AdminDashboard() {
                           <td style={{ padding: '10px 16px', borderBottom: '1px solid #141414', whiteSpace: 'nowrap' }}>
                             <div style={{ fontSize: 11, color: '#444' }}>↗ {formatDatum(sub.aangemeld_op)}</div>
                             <div style={{ fontSize: 11, color: sub.laatste_mail_op ? '#4ade80' : '#2a2a2a', marginTop: 3 }}>✉ {formatDatum(sub.laatste_mail_op)}</div>
+                            {sub.actief && (() => {
+                              const volgende = volgendeMailDatum(sub)
+                              return volgende ? (
+                                <div style={{ fontSize: 11, color: '#555', marginTop: 3 }}>→ {formatDatum(volgende.toISOString())}</div>
+                              ) : null
+                            })()}
                           </td>
                           <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

@@ -7,7 +7,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
 
   const { data, error } = await supabase
     .from('subscribers')
-    .select('naam, email, vakgebied, organisatie, frequentie, actief')
+    .select('naam, email, vakgebied, organisatie, frequentie, actief, voorkeuren')
     .eq('token', token)
     .single()
 
@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { token: str
   const { token } = params
   const body = await req.json()
 
-  const toegestaan = ['vakgebied', 'organisatie', 'frequentie', 'actief']
+  const toegestaan = ['vakgebied', 'organisatie', 'frequentie', 'actief', 'voorkeuren']
   const update: Record<string, unknown> = {}
 
   for (const key of toegestaan) {

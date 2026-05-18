@@ -1,51 +1,37 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-
-const ORG_OPTIES = [
-  { value: 'zzp', label: 'ZZP' },
-  { value: 'mkb', label: 'MKB (10–250)' },
-  { value: 'groot', label: 'Groot bedrijf (250+)' },
-  { value: 'overheid', label: 'Overheid / non-profit' },
-]
-
-const BRANCHE_OPTIES = [
-  'Horeca & Toerisme',
-  'Detailhandel & Retail',
-  'Financiële dienstverlening',
-  'Gezondheidszorg & Welzijn',
-  'Bouw & Vastgoed',
-  'Industrie & Productie',
-  'Transport & Logistiek',
-  'ICT & Tech',
-  'Onderwijs & Onderzoek',
-  'Zakelijke dienstverlening',
-  'Overheid & Non-profit',
-  'Energie & Utilities',
-  'Agri, Food & Farma',
-  'Media & Communicatie',
-  'Anders',
-]
-
-const STIJL_OPTIES = [
-  { value: 'kort', label: 'Kort & bondig', desc: 'Alleen wat ik moet weten, max 5 min lezen' },
-  { value: 'uitgebreid', label: 'Uitgebreid', desc: 'Met context, voorbeelden en achtergrond' },
-]
-
-const REGIO_OPTIES = ['Nederland', 'Europa (EU)', 'Internationaal']
+import { getLocaleFromCookie, teksten, type Locale } from '@/lib/locale'
 
 export default function InschrijvenPage() {
+  const [locale, setLocale] = useState<Locale>('nl')
+  useEffect(() => { setLocale(getLocaleFromCookie()) }, [])
+  const t = teksten[locale]
+
   const [stap, setStap] = useState(1)
   const [form, setForm] = useState({
     naam: '', email: '', vakgebied: '', branche: '', organisatie: 'mkb', frequentie: 'wekelijks',
+    land: 'NL',
     voorkeuren: {
       stijl: 'kort',
-      regio: ['Nederland'],
+      regio: [t.regiOpties[0]] as string[],
       extraOnderwerpen: '',
       alleenHogeImpact: false,
+      taal: '',
     }
   })
   const [status, setStatus] = useState<'idle' | 'laden' | 'succes' | 'fout'>('idle')
+
+  // Keep default regio in sync when locale loads
+  useEffect(() => {
+    setForm(f => ({
+      ...f,
+      voorkeuren: {
+        ...f.voorkeuren,
+        regio: f.voorkeuren.regio.length === 0 ? [teksten[locale].regiOpties[0]] : f.voorkeuren.regio,
+      },
+    }))
+  }, [locale])
 
   function toggleRegio(r: string) {
     setForm(f => {
@@ -66,23 +52,20 @@ export default function InschrijvenPage() {
   }
 
   if (status === 'succes') return (
-    <Pagina stap={0}>
+    <Pagina stap={0} footerNote={t.footerNote}>
       <div style={{ textAlign: 'center', padding: '32px 0' }}>
         <div style={{ width: 52, height: 52, background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 20, color: '#4ade80' }}>✓</div>
-        <h1 style={s.h1}>Je bent aangemeld!</h1>
-        <p style={s.sub}>
-          Je eerste nieuwsbrief ontvang je {form.frequentie === 'wekelijks' ? 'volgende week maandag' : 'begin volgende maand'}.<br />
-          Via de link in de mail kun je je voorkeuren altijd aanpassen.
-        </p>
+        <h1 style={s.h1}>{t.succesTitle}</h1>
+        <p style={s.sub} dangerouslySetInnerHTML={{ __html: t.succesSub(form.frequentie).replace('\n', '<br />') }} />
         <Link href="/" style={{ ...s.ctaPrimary, display: 'inline-block', width: 'auto', padding: '11px 28px', marginTop: 24 }}>
-          ← Terug naar home
+          {t.knopTerugHome}
         </Link>
       </div>
     </Pagina>
   )
 
   return (
-    <Pagina stap={stap}>
+    <Pagina stap={stap} footerNote={t.footerNote}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
         @media (max-width: 480px) { .inschrijven-card { padding: 24px 20px !important; } }
@@ -90,63 +73,77 @@ export default function InschrijvenPage() {
 
       {stap === 1 && (
         <>
-          <div style={s.stapLabel}>Stap 1 van 2</div>
-          <h1 style={s.h1}>Jouw profiel</h1>
-          <p style={s.sub}>Vul in wie je bent, zodat Brieft de juiste updates kan selecteren.</p>
+          <div style={s.stapLabel}>{t.inschrijvenStap1}</div>
+          <h1 style={s.h1}>{t.inschrijvenTitel1}</h1>
+          <p style={s.sub}>{t.inschrijvenSub1}</p>
 
           <div style={s.field}>
-            <label style={s.label}>Naam</label>
+            <label style={s.label}>{t.labelNaam}</label>
             <input
               style={s.input}
-              placeholder="Jouw naam"
+              placeholder={t.placeholderNaam}
               value={form.naam}
               onChange={e => setForm(f => ({ ...f, naam: e.target.value }))}
             />
           </div>
 
           <div style={s.field}>
-            <label style={s.label}>E-mailadres</label>
+            <label style={s.label}>{t.labelEmail}</label>
             <input
               style={s.input}
               type="email"
-              placeholder="jouw@email.nl"
+              placeholder={t.placeholderEmail}
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
             />
           </div>
 
           <div style={s.field}>
-            <label style={s.label}>Vakgebied of functie</label>
+            <label style={s.label}>{t.labelVakgebied}</label>
             <input
               style={s.input}
-              placeholder="Bijv. Marketing, Finance, HR, Inkoop…"
+              placeholder={t.placeholderVakgebied}
               value={form.vakgebied}
               onChange={e => setForm(f => ({ ...f, vakgebied: e.target.value }))}
             />
-            <div style={s.hint}>Vul vrij in — Brieft past zich automatisch aan</div>
+            <div style={s.hint}>{t.hintVakgebied}</div>
+          </div>
+
+          <div style={s.field}>
+            <label style={s.label}>{t.labelLand}</label>
+            <select
+              style={{ ...s.input, cursor: 'pointer' }}
+              value={form.land}
+              onChange={e => setForm(f => ({ ...f, land: e.target.value }))}
+            >
+              {t.landOpties.map(l => (
+                <option key={l.value} value={l.value}>{l.label}</option>
+              ))}
+            </select>
+            <div style={s.hint}>{t.hintLand}</div>
           </div>
 
           <div style={s.field}>
             <label style={s.label}>
-              Branche <span style={{ color: '#333', fontWeight: 400 }}>(optioneel)</span>
+              {t.labelBranche} <span style={{ color: '#333', fontWeight: 400 }}>{t.optioneel}</span>
             </label>
             <select
               style={{ ...s.input, cursor: 'pointer' }}
               value={form.branche}
               onChange={e => setForm(f => ({ ...f, branche: e.target.value }))}
             >
-              <option value="">Selecteer jouw branche…</option>
-              {BRANCHE_OPTIES.map(b => (
+              <option value="">{t.placeholderBranche}</option>
+              {t.brancheOpties.map(b => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </select>
-            <div style={s.hint}>Brieft houdt rekening met branche-specifieke regelgeving</div>
+            <div style={s.hint}>{t.hintBranche}</div>
           </div>
 
           <div style={s.field}>
-            <label style={s.label}>Organisatie</label>
+            <label style={s.label}>{t.labelOrganisatie}</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {ORG_OPTIES.map(o => (
+              {t.orgOpties.map(o => (
                 <button
                   key={o.value}
                   style={{ ...s.optBtn, ...(form.organisatie === o.value ? s.optBtnOn : {}) }}
@@ -159,15 +156,15 @@ export default function InschrijvenPage() {
           </div>
 
           <div style={s.field}>
-            <label style={s.label}>Frequentie</label>
+            <label style={s.label}>{t.labelFrequentie}</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {(['wekelijks', 'maandelijks'] as const).map(f => (
+              {t.frequentieOpties.map(o => (
                 <button
-                  key={f}
-                  style={{ ...s.optBtn, ...(form.frequentie === f ? s.optBtnOn : {}) }}
-                  onClick={() => setForm(p => ({ ...p, frequentie: f }))}
+                  key={o.value}
+                  style={{ ...s.optBtn, ...(form.frequentie === o.value ? s.optBtnOn : {}) }}
+                  onClick={() => setForm(p => ({ ...p, frequentie: o.value }))}
                 >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {o.label}
                 </button>
               ))}
             </div>
@@ -178,21 +175,21 @@ export default function InschrijvenPage() {
             onClick={() => setStap(2)}
             disabled={!form.naam || !form.email || !form.vakgebied}
           >
-            Volgende →
+            {t.knopVolgende}
           </button>
         </>
       )}
 
       {stap === 2 && (
         <>
-          <div style={s.stapLabel}>Stap 2 van 2</div>
-          <h1 style={s.h1}>Jouw voorkeuren</h1>
-          <p style={s.sub}>Optioneel — maar hoe meer je invult, hoe relevanter je nieuwsbrief wordt.</p>
+          <div style={s.stapLabel}>{t.inschrijvenStap2}</div>
+          <h1 style={s.h1}>{t.inschrijvenTitel2}</h1>
+          <p style={s.sub}>{t.inschrijvenSub2}</p>
 
           <div style={s.field}>
-            <label style={s.label}>Schrijfstijl</label>
+            <label style={s.label}>{t.labelStijl}</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {STIJL_OPTIES.map(o => (
+              {t.stijlOpties.map(o => (
                 <button
                   key={o.value}
                   style={{ ...s.optBtn, ...(form.voorkeuren.stijl === o.value ? s.optBtnOn : {}), textAlign: 'left', height: 'auto', padding: '12px 14px' }}
@@ -206,9 +203,22 @@ export default function InschrijvenPage() {
           </div>
 
           <div style={s.field}>
-            <label style={s.label}>Regio</label>
+            <label style={s.label}>{t.labelTaal}</label>
+            <select
+              style={{ ...s.input, cursor: 'pointer' }}
+              value={form.voorkeuren.taal}
+              onChange={e => setForm(f => ({ ...f, voorkeuren: { ...f.voorkeuren, taal: e.target.value } }))}
+            >
+              {t.taalOpties.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={s.field}>
+            <label style={s.label}>{t.labelRegio}</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {REGIO_OPTIES.map(r => (
+              {t.regiOpties.map(r => (
                 <button
                   key={r}
                   style={{ ...s.chip, ...(form.voorkeuren.regio.includes(r) ? s.chipOn : {}) }}
@@ -218,21 +228,21 @@ export default function InschrijvenPage() {
                 </button>
               ))}
             </div>
-            <div style={s.hint}>Selecteer meerdere regio&apos;s als dat relevant is</div>
+            <div style={s.hint}>{t.hintRegio}</div>
           </div>
 
           <div style={s.field}>
             <label style={s.label}>
-              Extra onderwerpen of trefwoorden{' '}
-              <span style={{ color: '#333', fontWeight: 400 }}>(optioneel)</span>
+              {t.labelExtraOnderwerpen}{' '}
+              <span style={{ color: '#333', fontWeight: 400 }}>{t.optioneel}</span>
             </label>
             <textarea
               style={{ ...s.input, height: 80, resize: 'vertical', fontFamily: 'inherit' }}
-              placeholder="Bijv. pensioen, AI Act, cao detailhandel, DORA…"
+              placeholder={t.placeholderExtraOnderwerpen}
               value={form.voorkeuren.extraOnderwerpen}
               onChange={e => setForm(f => ({ ...f, voorkeuren: { ...f.voorkeuren, extraOnderwerpen: e.target.value } }))}
             />
-            <div style={s.hint}>Brieft let extra op updates die hierop aansluiten</div>
+            <div style={s.hint}>{t.hintExtraOnderwerpen}</div>
           </div>
 
           <div style={s.field}>
@@ -244,26 +254,26 @@ export default function InschrijvenPage() {
                 <div style={{ width: 16, height: 16, borderRadius: '50%', background: form.voorkeuren.alleenHogeImpact ? '#0a0a0a' : '#333', position: 'absolute', top: 2, left: form.voorkeuren.alleenHogeImpact ? 21 : 2, transition: 'left .2s' }}></div>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#c8c8c6' }}>Alleen hoge-impact updates</div>
-                <div style={{ fontSize: 11, color: '#333', marginTop: 2 }}>Ontvang alleen updates die directe actie vereisen</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: '#c8c8c6' }}>{t.labelAlleenHogeImpact}</div>
+                <div style={{ fontSize: 11, color: '#333', marginTop: 2 }}>{t.hintAlleenHogeImpact}</div>
               </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-            <button style={s.ctaSecondary} onClick={() => setStap(1)}>← Terug</button>
+            <button style={s.ctaSecondary} onClick={() => setStap(1)}>{t.knopTerug}</button>
             <button
               style={{ ...s.ctaPrimary, flex: 1, opacity: status === 'laden' ? .5 : 1 }}
               onClick={submit}
               disabled={status === 'laden'}
             >
-              {status === 'laden' ? 'Aanmelden…' : 'Aanmelden'}
+              {status === 'laden' ? t.knopAanmeldenLaden : t.knopAanmelden}
             </button>
           </div>
 
           {status === 'fout' && (
             <div style={{ marginTop: 12, fontSize: 13, color: '#f87171', textAlign: 'center' }}>
-              Er ging iets mis. Probeer het opnieuw.
+              {t.foutMelding}
             </div>
           )}
         </>
@@ -272,7 +282,7 @@ export default function InschrijvenPage() {
   )
 }
 
-function Pagina({ children, stap }: { children: React.ReactNode; stap: number }) {
+function Pagina({ children, stap, footerNote }: { children: React.ReactNode; stap: number; footerNote: string }) {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '0 1rem 60px', fontFamily: "'DM Sans', sans-serif" }}>
 
@@ -305,7 +315,7 @@ function Pagina({ children, stap }: { children: React.ReactNode; stap: number })
 
       {/* Footer note */}
       <div style={{ marginTop: 24, fontSize: 11, color: '#2a2a2a', textAlign: 'center' }}>
-        Via de link in elke mail kun je je voorkeuren aanpassen of je uitschrijven.
+        {footerNote}
       </div>
     </div>
   )

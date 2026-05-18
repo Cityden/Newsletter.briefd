@@ -10,6 +10,20 @@ const ORG_OPTIES = [
   { value: 'overheid', label: 'Overheid / non-profit' },
 ]
 
+const TAAL_OPTIES = [
+  { value: '',           label: 'Automatisch (op basis van land)' },
+  { value: 'Nederlands', label: 'Nederlands' },
+  { value: 'Engels',     label: 'Engels' },
+  { value: 'Duits',      label: 'Duits' },
+  { value: 'Frans',      label: 'Frans' },
+  { value: 'Spaans',     label: 'Spaans' },
+  { value: 'Italiaans',  label: 'Italiaans' },
+  { value: 'Pools',      label: 'Pools' },
+  { value: 'Deens',      label: 'Deens' },
+  { value: 'Zweeds',     label: 'Zweeds' },
+  { value: 'Fins',       label: 'Fins' },
+]
+
 interface Subscriber {
   naam: string
   email: string
@@ -17,6 +31,7 @@ interface Subscriber {
   organisatie: string
   frequentie: string
   actief: boolean
+  voorkeuren?: { taal?: string }
 }
 
 function VoorkeurenForm() {
@@ -25,7 +40,7 @@ function VoorkeurenForm() {
   const uitschrijven = params.get('uitschrijven') === '1'
 
   const [subscriber, setSubscriber] = useState<Subscriber | null>(null)
-  const [form, setForm] = useState({ vakgebied: '', organisatie: 'mkb', frequentie: 'wekelijks' })
+  const [form, setForm] = useState({ vakgebied: '', organisatie: 'mkb', frequentie: 'wekelijks', taal: '' })
   const [laadStatus, setLaadStatus] = useState<'laden' | 'geladen' | 'fout' | 'geen-token'>('laden')
   const [opslaanStatus, setOpslaanStatus] = useState<'idle' | 'laden' | 'succes' | 'fout'>('idle')
   const [uitgeschreven, setUitgeschreven] = useState(false)
@@ -37,7 +52,7 @@ function VoorkeurenForm() {
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((data: Subscriber) => {
         setSubscriber(data)
-        setForm({ vakgebied: data.vakgebied, organisatie: data.organisatie, frequentie: data.frequentie })
+        setForm({ vakgebied: data.vakgebied, organisatie: data.organisatie, frequentie: data.frequentie, taal: data.voorkeuren?.taal ?? '' })
         setLaadStatus('geladen')
         if (uitschrijven) handleUitschrijven(token)
       })
@@ -57,10 +72,16 @@ function VoorkeurenForm() {
   async function opslaan() {
     if (!token) return
     setOpslaanStatus('laden')
+    const bestaandeVoorkeuren = subscriber?.voorkeuren ?? {}
     const res = await fetch(`/api/subscribers/${token}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        vakgebied: form.vakgebied,
+        organisatie: form.organisatie,
+        frequentie: form.frequentie,
+        voorkeuren: { ...bestaandeVoorkeuren, taal: form.taal || undefined },
+      }),
     })
     setOpslaanStatus(res.ok ? 'succes' : 'fout')
   }
@@ -155,6 +176,19 @@ function VoorkeurenForm() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div style={s.field}>
+          <label style={s.fieldLabel}>Taal van de nieuwsbrief</label>
+          <select
+            style={{ ...s.input, cursor: 'pointer' }}
+            value={form.taal}
+            onChange={e => setForm(f => ({ ...f, taal: e.target.value }))}
+          >
+            {TAAL_OPTIES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
         </div>
 
         <button

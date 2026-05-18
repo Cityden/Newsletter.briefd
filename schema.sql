@@ -8,6 +8,7 @@ create table subscribers (
   frequentie text not null check (frequentie in ('wekelijks', 'maandelijks')),
   actief boolean default true,
   token uuid default gen_random_uuid() unique not null, -- voor de voorkeurenlink in de mail
+  land text default 'NL',                               -- landcode (ISO 3166-1 alpha-2), bepaalt bronnen en taal
   bronnen jsonb default '[]'::jsonb,                    -- opgeslagen bronnenlijst per profiel
   bronnen_gegenereerd_op timestamptz,
   aangemeld_op timestamptz default now(),

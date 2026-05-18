@@ -16,7 +16,7 @@ function escapeHtml(str: string): string {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { naam, email, vakgebied, branche, organisatie, frequentie, voorkeuren } = body
+  const { naam, email, vakgebied, branche, organisatie, frequentie, voorkeuren, land } = body
 
   if (!naam || !email || !vakgebied || !organisatie || !frequentie) {
     return NextResponse.json({ error: 'Verplichte velden ontbreken' }, { status: 400 })
@@ -43,7 +43,11 @@ export async function POST(req: NextRequest) {
   // Haal bronnen op — als Claude API down is, gaan we door met lege lijst
   let bronnen: { naam: string; url: string }[] = []
   try {
-    bronnen = await getBronnen(vakgebied)
+    bronnen = await getBronnen(vakgebied, {
+      branche: branche || undefined,
+      extraOnderwerpen: voorkeuren?.extraOnderwerpen || undefined,
+      land: land || 'NL',
+    })
   } catch (err) {
     console.error('getBronnen mislukt:', err)
     // Aanmelding gaat door; bronnen worden bij volgende cron regenereerd
@@ -62,6 +66,7 @@ export async function POST(req: NextRequest) {
       bronnen_gegenereerd_op: new Date().toISOString(),
       ...(branche ? { branche } : {}),
       ...(voorkeuren ? { voorkeuren } : {}),
+      land: land || 'NL',
     }, { onConflict: 'email' })
     .select('token')
     .single()
