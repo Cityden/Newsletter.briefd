@@ -8,7 +8,9 @@ import { logAgentRun, timer } from './logging'
 // nog, en krijgt de expliciete instructie om nooit verder te gaan dan de brontekst
 // (zie automatiseringsplan sectie 2b, punt 1 en 2: "brontekst nooit loslaten").
 
-const RELEVANTIE_DREMPEL = 4
+// Op 4 kwam vrijwel alles door: met brede bronnen als EUR-Lex leverde dat
+// nieuwsbrieven vol sanctie- en landbouwwetgeving op. 6 = "duidelijk relevant".
+const RELEVANTIE_DREMPEL = 6
 
 export interface RedactieItem {
   titel: string

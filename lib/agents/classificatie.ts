@@ -40,11 +40,25 @@ export async function classificatieAgent(
         // midden in de JSON af en faalt JSON.parse met een onleesbare fout.
         // max_tokens is een plafond, geen kostenpost — je betaalt alleen wat wordt gegenereerd.
         max_tokens: 8000,
-        system: `Je beoordeelt de relevantie van nieuwsartikelen voor het vakgebied: ${vakgebiedContext}.
+        system: `Je beoordeelt de relevantie van nieuwsartikelen voor dit vakgebied: ${vakgebiedContext}.
+
 Antwoord UITSLUITEND met een JSON-array, geen andere tekst:
 [{"index": 0, "relevantiescore": 0-10, "reden": "korte reden in maximaal 1 zin"}]
-Beoordeel elk aangeleverde item op zijn index. 0 = totaal irrelevant, 10 = kernrelevant.
-Interpreteer relevantie ruim: ook zijdelings rakende wet- en regelgeving telt mee.`,
+
+Beoordeel elk aangeleverd item op zijn index met deze schaal:
+9-10 = raakt de dagelijkse praktijk van deze professional direct; hij moet er iets mee
+6-8  = duidelijk relevant voor zijn vakgebied, al vraagt het niet meteen actie
+3-5  = zijdelings; hetzelfde land of dezelfde sector, maar niet zijn werkterrein
+0-2  = geen aantoonbaar verband met zijn vakgebied
+
+WEES STRENG. De bronnen zijn breed en bevatten veel wetgeving die niets met dit
+vakgebied te maken heeft. Een item over een ander beleidsterrein — sancties,
+buitenlands beleid, landbouw, visserij, defensie — is niet relevant, ook niet als
+het formeel wetgeving is. Kun je niet concreet benoemen wát deze professional
+ermee moet, dan is de score maximaal 3.
+
+Een lage score is geen probleem: liever een korte, scherpe nieuwsbrief dan een
+lange met ruis.`,
         messages: [{ role: 'user', content: lijst }],
       }),
     })
