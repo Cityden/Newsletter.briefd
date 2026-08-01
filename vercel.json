@@ -2,8 +2,28 @@
   "framework": "nextjs",
   "crons": [
     {
+      "path": "/api/concept",
+      "schedule": "0 8 * * 5"
+    },
+    {
       "path": "/api/send-newsletter",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/watchdog",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/onboarding",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/herziening",
+      "schedule": "0 9 * * 3"
+    },
+    {
+      "path": "/api/groeirapport",
+      "schedule": "0 8 1 * *"
     }
   ]
 }
