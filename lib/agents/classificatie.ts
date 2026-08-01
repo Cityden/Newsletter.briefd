@@ -36,7 +36,10 @@ export async function classificatieAgent(
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1500,
+        // 25 artikelen × score + reden past niet in 1500 tokens; dan kapt het model
+        // midden in de JSON af en faalt JSON.parse met een onleesbare fout.
+        // max_tokens is een plafond, geen kostenpost — je betaalt alleen wat wordt gegenereerd.
+        max_tokens: 8000,
         system: `Je beoordeelt de relevantie van nieuwsartikelen voor het vakgebied: ${vakgebiedContext}.
 Antwoord UITSLUITEND met een JSON-array, geen andere tekst:
 [{"index": 0, "relevantiescore": 0-10, "reden": "korte reden in maximaal 1 zin"}]
@@ -47,6 +50,9 @@ Interpreteer relevantie ruim: ook zijdelings rakende wet- en regelgeving telt me
     })
     const data = await response.json()
     if (data.error) throw new Error(JSON.stringify(data.error))
+    if (data.stop_reason === 'max_tokens') {
+      throw new Error(`antwoord afgekapt op max_tokens (${artikelen.length} artikelen) — verhoog max_tokens of verklein de batch`)
+    }
 
     const tekst = data.content?.[0]?.text ?? '[]'
     const clean = tekst.replace(/```json|```/g, '').trim()

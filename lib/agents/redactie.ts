@@ -54,7 +54,9 @@ export async function redactieAgent(
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4000,
+        // Een volle nieuwsbrief (10-15 items met samenvatting en actie) loopt ruim
+        // over 4000 tokens heen; het model kapte dan midden in de JSON af.
+        max_tokens: 16000,
         system: `Je bent een redactie-agent die regelgevingsupdates schrijft voor professionals.
 
 KRITIEKE REGEL: schrijf UITSLUITEND op basis van de letterlijke brontekst. Nooit aanvullen
@@ -99,6 +101,9 @@ ${artikelTekst}`,
 
     const data = await response.json()
     if (data.error) throw new Error(JSON.stringify(data.error))
+    if (data.stop_reason === 'max_tokens') {
+      throw new Error(`antwoord afgekapt op max_tokens (${relevant.length} relevante items) — verhoog max_tokens of verklein de batch`)
+    }
 
     const tekst = data.content?.[0]?.text ?? ''
     const clean = tekst.replace(/```json|```/g, '').trim()

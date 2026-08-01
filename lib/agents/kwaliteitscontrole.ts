@@ -53,7 +53,7 @@ export async function kwaliteitscontroleAgent(
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 500,
+          max_tokens: 1500,
           system: `Je bent een strenge fact-checker. Vergelijk de SAMENVATTING met de BRONTEKST.
 Markeer elk feit, cijfer, bedrag, datum of bewering in de samenvatting dat niet
 letterlijk (of als directe parafrase) terug te vinden is in de brontekst.
@@ -73,6 +73,11 @@ Wees streng: bij twijfel is akkoord=false.`,
 
       const data = await response.json()
       if (data.error) throw new Error(JSON.stringify(data.error))
+      if (data.stop_reason === 'max_tokens') {
+        // Bij twijfel afkeuren, niet gokken: een afgekapt antwoord is geen goedkeuring.
+        afgekeurd.push({ item, reden: 'controle-antwoord afgekapt op max_tokens' })
+        continue
+      }
 
       const tekst = data.content?.[0]?.text ?? '{}'
       const clean = tekst.replace(/```json|```/g, '').trim()
