@@ -29,8 +29,14 @@ export async function kwaliteitscontroleAgent(
   const goedgekeurd: RedactieItem[] = []
   const afgekeurd: { item: RedactieItem; reden: string }[] = []
 
+  // Exacte string-vergelijking keurde items af op puur cosmetische verschillen
+  // (een gedecodeerde &, een afsluitende slash). Het doel is een verzonnen URL
+  // betrappen, niet een herschreven ampersand — dus normaliseren vóór vergelijken.
+  const normaliseerUrl = (u: string) =>
+    u.trim().replace(/&amp;/g, '&').replace(/\/+$/, '').toLowerCase()
+
   for (const item of redactie.items) {
-    const bron = bronArtikelen.find(a => a.url === item.bronUrl)
+    const bron = bronArtikelen.find(a => normaliseerUrl(a.url) === normaliseerUrl(item.bronUrl))
     if (!bron) {
       // bronUrl komt niet voor in de aangeleverde artikelen — mogelijk verzonnen door de redactie-agent
       afgekeurd.push({ item, reden: 'bronUrl niet gevonden in aangeleverde artikelen' })

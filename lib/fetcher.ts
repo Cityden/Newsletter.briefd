@@ -14,6 +14,20 @@ function get(xml: string, tag: string): string {
   ).trim()
 }
 
+// In XML staan URL's met ge-escapete ampersands (&amp;). Zonder decoderen krijg je
+// links als ?id=ECLI:...&amp;pk_campaign=rss, waarin de parameter letterlijk
+// "amp;pk_campaign" gaat heten. Dat levert kapotte bronlinks in de nieuwsbrief op,
+// én de redactie-agent geeft de URL gedecodeerd terug, waardoor de
+// kwaliteitscontrole hem niet meer herkent en het item afkeurt.
+function decodeEntiteiten(s: string): string {
+  return s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&amp;/g, '&') // als laatste, anders wordt &amp;lt; dubbel gedecodeerd
+}
+
 function getLinkAtom(itemXml: string): string {
   // Atom: <link href="..." rel="alternate"/> of <link href="..."/>
   return (
@@ -27,8 +41,8 @@ function getLinkAtom(itemXml: string): string {
 function parseRSS(xml: string, bronnaam: string): Artikel[] {
   const items = xml.match(/<item>([\s\S]*?)<\/item>/g) ?? []
   return items.slice(0, 25).map(item => ({
-    titel: get(item, 'title').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
-    url: get(item, 'link').trim(),
+    titel: decodeEntiteiten(get(item, 'title')),
+    url: decodeEntiteiten(get(item, 'link').trim()),
     samenvatting: get(item, 'description').replace(/<[^>]+>/g, '').trim().slice(0, 500),
     gepubliceerdOp: get(item, 'pubDate') || get(item, 'dc:date') || '',
     bron: bronnaam,
@@ -38,8 +52,8 @@ function parseRSS(xml: string, bronnaam: string): Artikel[] {
 function parseAtom(xml: string, bronnaam: string): Artikel[] {
   const entries = xml.match(/<entry>([\s\S]*?)<\/entry>/g) ?? []
   return entries.slice(0, 25).map(entry => ({
-    titel: get(entry, 'title').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
-    url: getLinkAtom(entry),
+    titel: decodeEntiteiten(get(entry, 'title')),
+    url: decodeEntiteiten(getLinkAtom(entry)),
     samenvatting: (get(entry, 'summary') || get(entry, 'content')).replace(/<[^>]+>/g, '').trim().slice(0, 500),
     gepubliceerdOp: get(entry, 'published') || get(entry, 'updated') || '',
     bron: bronnaam,
