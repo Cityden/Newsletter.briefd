@@ -173,23 +173,56 @@ export const LAND_NAMEN: Record<string, string> = {
 }
 
 // ─── VERTROUWDE DOMEINEN ─────────────────────────────────────────────────────
+// Uitsluitend domeinen van wetgevers, toezichthouders en rechtspraak. Geen
+// nieuwsmedia, geen brancheblogs, geen advieskantoren: die duiden regelgeving,
+// en die duiding is precies wat Brieft zelf hoort te doen.
+// Let op: dit zijn registreerbare domeinen. Subdomeinen matchen automatisch,
+// losse landcodes als '.nl' horen hier NIET thuis — die kan iedereen kopen.
 const TOEGESTANE_DOMEINEN = [
-  '.nl', 'overheid.nl', 'rechtspraak.nl',
-  'europa.eu', 'eur-lex.europa.eu',
-  '.gov', 'federalregister.gov', 'govinfo.gov', 'sec.gov', 'ftc.gov',
-  'legislation.gov.uk', 'parliament.uk', 'gov.uk', 'ico.org.uk',
-  'fca.org.uk', 'bankofengland.co.uk', 'ncsc.gov.uk',
-  'bundesregierung.de', 'bund.de', 'bafin.de', 'bundesarbeitsgericht.de', 'bundestag.de',
-  'legifrance.gouv.fr', 'gouvernement.fr', 'cnil.fr', 'amf-france.org',
-  'ssi.gouv.fr', 'conseil-etat.fr',
-  'fgov.be', 'belgium.be', 'fsma.be', 'gegevensbeschermingsautoriteit.be', 'nbb.be',
-  'boe.es', 'lamoncloa.gob.es', 'cnmv.es', 'aepd.es',
+  // Nederland
+  'overheid.nl', 'rechtspraak.nl', 'afm.nl', 'dnb.nl', 'acm.nl',
+  'autoriteitpersoonsgegevens.nl', 'ncsc.nl', 'digitaltrustcenter.nl',
+  'belastingdienst.nl', 'rvo.nl', 'nza.nl', 'uwv.nl', 'kvk.nl', 'awvn.nl',
+  // Europese Unie
+  'europa.eu',
+  // Verenigde Staten (naast het .gov-suffix)
+  'federalreserve.gov',
+  // Verenigd Koninkrijk
+  'parliament.uk', 'ico.org.uk', 'fca.org.uk', 'bankofengland.co.uk',
+  // Duitsland
+  'bundesregierung.de', 'bafin.de', 'bundesarbeitsgericht.de', 'bundestag.de',
+  'datenschutzkonferenz-online.de', 'bundesfinanzhof.de',
+  // Frankrijk
+  'amf-france.org', 'cnil.fr', 'conseil-etat.fr',
+  // België
+  'belgium.be', 'fsma.be', 'gegevensbeschermingsautoriteit.be', 'nbb.be',
+  // Spanje / Italië
+  'boe.es', 'cnmv.es', 'aepd.es',
   'gazzettaufficiale.it', 'governo.it', 'consob.it', 'garanteprivacy.it',
+  // Internationale organisaties
   'oecd.org', 'ilo.org', 'fatf-gafi.org', 'wto.org', 'bis.org',
 ]
 
+// Toetst de HOSTNAME, niet de hele URL. Een kale url.includes('.nl') liet elke
+// Nederlandse site door — nu.nl, de Telegraaf, een willekeurige blog — en
+// url.includes('.gov') liet zelfs phishing.gov.malware.ru toe. Alleen suffixen
+// die een overheid zelf uitgeeft mogen als geheel domein gelden.
+const OFFICIELE_SUFFIXEN = ['.gov', '.gov.uk', '.overheid.nl', '.europa.eu', '.gouv.fr', '.bund.de', '.fgov.be']
+
 function isBetrouwbaarDomein(url: string): boolean {
-  return TOEGESTANE_DOMEINEN.some(d => url.includes(d))
+  let host: string
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'https:') return false // officiële bronnen doen https
+    host = u.hostname.toLowerCase()
+  } catch {
+    return false
+  }
+
+  if (OFFICIELE_SUFFIXEN.some(s => host.endsWith(s))) return true
+
+  // Exacte match op het domein zelf of op een subdomein daarvan.
+  return TOEGESTANE_DOMEINEN.some(d => host === d || host.endsWith(`.${d}`))
 }
 
 // Korte termen ('it', 'hr', 'esg') moeten als heel woord matchen. Met een kale
