@@ -35,3 +35,92 @@ create policy "token toegang" on subscribers
 -- Index for fast token lookups
 create index on subscribers(token);
 create index on subscribers(email);
+
+-- Agent runs — audit trail voor de agent-architectuur (automatiseringsplan sectie 6/2b).
+-- Eén tabel voor alle agents: scout, classificatie, redactie, kwaliteitscontrole, personalisatie.
+-- Basis voor zowel de (nog te bouwen) watchdog-agent als handmatige debugging.
+create table agent_runs (
+  id uuid primary key default gen_random_uuid(),
+  agent text not null check (agent in ('scout', 'classificatie', 'redactie', 'kwaliteitscontrole', 'personalisatie')),
+  input_ref text not null,          -- subscriber-id, artikel-url, of andere traceerbare referentie
+  output jsonb,                     -- korte samenvatting van het resultaat (geen volledige content)
+  status text not null check (status in ('gelukt', 'mislukt', 'geëscaleerd')),
+  reden text,                       -- waarom mislukt/geëscaleerd — cruciaal voor de audit trail
+  duration_ms integer,
+  aangemaakt_op timestamptz default now()
+);
+
+alter table agent_runs enable row level security;
+
+-- Alleen server-side (service role) mag hier in schrijven/lezen — geen publieke policy nodig
+-- zolang de API routes met de service-role key werken zoals nu al het geval is.
+
+create index on agent_runs(agent);
+create index on agent_runs(status);
+create index on agent_runs(input_ref);
+create index on agent_runs(aangemaakt_op);
+
+-- Uitbreiding voor watchdog/herziening/groeirapport/onboarding-agents
+alter table agent_runs drop constraint if exists agent_runs_agent_check;
+alter table agent_runs add constraint agent_runs_agent_check
+  check (agent in ('scout', 'classificatie', 'redactie', 'kwaliteitscontrole', 'personalisatie',
+                    'watchdog', 'herziening', 'groeirapport', 'onboarding'));
+
+-- Voor het groeirapport (opzeggingen deze maand) en de onboarding-agent (dag-3 mail)
+alter table subscribers add column if not exists opgezegd_op timestamptz;
+alter table subscribers add column if not exists onboarding_stap integer not null default 0;
+
+-- Gepubliceerde items — basis voor de herzieningsagent. bron_snapshot is de RUWE
+-- samenvatting van het bronartikel op publicatiemoment (vóór de redactie-agent
+-- het herschreef), zodat latere vergelijkingen tegen de bron niet worden
+-- verstoord door verschillen in schrijfstijl.
+create table gepubliceerde_items (
+  id uuid primary key default gen_random_uuid(),
+  bron_url text unique not null,
+  bron_naam text,
+  titel text,
+  samenvatting text,          -- de gepubliceerde (herschreven) tekst, voor menselijke referentie
+  bron_snapshot text,         -- de ruwe brontekst op moment van publicatie, gebruikt voor vergelijking
+  eerst_gepubliceerd_op timestamptz default now(),
+  laatst_gecontroleerd_op timestamptz,
+  status text not null default 'actief_gemonitord'
+    check (status in ('actief_gemonitord', 'afgehandeld', 'rectificatie_nodig')),
+  rectificatie_notitie text
+);
+
+alter table gepubliceerde_items enable row level security;
+
+create index on gepubliceerde_items(status);
+create index on gepubliceerde_items(bron_url);
+create index on gepubliceerde_items(laatst_gecontroleerd_op);
+
+-- Concept nieuwsbrieven — voor de pre-send goedkeurflow (vrijdagcron → goedkeuring → maandagverzending).
+-- batch_token wordt gedeeld door alle concepten in één run; één klik keurt de hele batch goed.
+create table concept_nieuwsbrieven (
+  id uuid primary key default gen_random_uuid(),
+  batch_token uuid not null,
+  subscriber_id uuid references subscribers(id) on delete cascade,
+  email text not null,
+  naam text not null,
+  onderwerp text not null,
+  html text not null,
+  items_preview jsonb,           -- [{titel, impact, bronNaam}] voor de preview in de goedkeurmail
+  aangemaakt_op timestamptz default now(),
+  status text not null default 'in_afwachting'
+    check (status in ('in_afwachting', 'goedgekeurd', 'verzonden', 'geannuleerd'))
+);
+
+alter table concept_nieuwsbrieven enable row level security;
+
+create index on concept_nieuwsbrieven(batch_token);
+create index on concept_nieuwsbrieven(status);
+create index on concept_nieuwsbrieven(aangemaakt_op);
+
+-- ── Rechten voor de service role ──────────────────────────────────────────
+-- RLS aanzetten is niet genoeg: de service role heeft óók table-privileges
+-- nodig. Zonder deze grants geven agent_runs, gepubliceerde_items en
+-- concept_nieuwsbrieven "permission denied for table" (42501), waardoor de
+-- Agents-tab in het dashboard leeg blijft en logAgentRun stil faalt.
+grant select, insert, update, delete on public.agent_runs to service_role;
+grant select, insert, update, delete on public.gepubliceerde_items to service_role;
+grant select, insert, update, delete on public.concept_nieuwsbrieven to service_role;

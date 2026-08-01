@@ -1,6 +1,6 @@
 import type { Artikel } from './fetcher'
 
-interface Voorkeuren {
+export interface Voorkeuren {
   stijl: 'kort' | 'uitgebreid'
   regio: string[]
   extraOnderwerpen: string
@@ -8,7 +8,7 @@ interface Voorkeuren {
   taal?: string
 }
 
-interface Profiel {
+export interface Profiel {
   naam: string
   vakgebied: string
   branche?: string
@@ -17,7 +17,7 @@ interface Profiel {
   voorkeuren?: Voorkeuren
 }
 
-function bepaalTaal(land?: string): string {
+export function bepaalTaal(land?: string): string {
   if (!land || land === 'NL') return 'Nederlands'
   const map: Record<string, string> = {
     BE: 'Nederlands', DE: 'Duits', FR: 'Frans', GB: 'Engels',
@@ -50,7 +50,7 @@ function bepaalHtmlLang(land?: string): string {
   return map[land] ?? 'en'
 }
 
-function uitlegVakgebied(vakgebied: string): string {
+export function uitlegVakgebied(vakgebied: string): string {
   const v = vakgebied.toLowerCase()
   if (v.includes('fiscal') || v.includes('belasting') || v.includes('vpb') || v.includes('btw') || v.includes('tax'))
     return 'fiscaal recht, belastingwetgeving, btw, vennootschapsbelasting, inkomstenbelasting'
@@ -201,7 +201,7 @@ ${artikelTekst}`
   return { onderwerp: parsed.onderwerp, html }
 }
 
-function saniteerVoorPrompt(str: string): string {
+export function saniteerVoorPrompt(str: string): string {
   // Verwijder newlines en voorkom prompt injection via gebruikersinput
   return str.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200)
 }
@@ -372,7 +372,7 @@ function typeLabel(type: string, t: UiTeksten) {
   return map[type] ?? type
 }
 
-function buildHTML(
+export function buildHTML(
   data: ReturnType<typeof JSON.parse>,
   profiel: Profiel,
   beheerUrl: string,

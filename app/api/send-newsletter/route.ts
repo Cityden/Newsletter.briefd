@@ -1,9 +1,23 @@
+// Maandagcron — agent-pipeline met pre-send goedkeurflow.
+//
+// Volgorde:
+// 1. Check of er goedgekeurde concepten uit de vrijdagcron klaarstaan.
+//    → Ja: stuur die direct via Resend (slaat stappen 1-4 opnieuw over).
+//    → Concepten bestaan maar niet goedgekeurd: alert + skip.
+//    → Geen concepten: fallback naar volledige pipeline (vrijdagcron niet gedraaid).
+
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { supabase } from '@/lib/supabase'
-import { fetchArtikelen } from '@/lib/fetcher'
-import { genereerNieuwsbrief } from '@/lib/generator'
 import { getBronnen } from '@/lib/sources'
+import { uitlegVakgebied } from '@/lib/generator'
+import { scoutAgent } from '@/lib/agents/scout'
+import { classificatieAgent } from '@/lib/agents/classificatie'
+import { redactieAgent } from '@/lib/agents/redactie'
+import { kwaliteitscontroleAgent } from '@/lib/agents/kwaliteitscontrole'
+import { personalisatieEnVerzendAgent } from '@/lib/agents/personalisatie'
+import { registreerGepubliceerdeItems } from '@/lib/agents/herziening'
+import { stuurAlertMail } from '@/lib/agents/alert'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
@@ -12,53 +26,114 @@ function isEersteMaandagVanMaand(): boolean {
   return nu.getDay() === 1 && nu.getDate() <= 7
 }
 
-async function stuurFoutmelding(onderwerp: string, regels: string[]) {
-  const alertEmail = process.env.ALERT_EMAIL
-  const emailDomein = process.env.EMAIL_DOMEIN ?? 'brieft.online'
-  if (!alertEmail) return
-
-  const datum = new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam' })
-  const lijstHTML = regels.map(r => `<li style="margin-bottom:6px">${r}</li>`).join('')
-
-  await resend.emails.send({
-    from: `Nieuwsbrief Alerts <newsletter@${emailDomein}>`,
-    to: alertEmail,
-    subject: `⚠️ ${onderwerp}`,
-    html: `<!DOCTYPE html>
-<html lang="nl">
-<head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f7f7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-  <div style="max-width:560px;margin:0 auto;padding:32px 16px">
-    <div style="background:#fff;border:1px solid #eee;border-radius:16px;padding:28px">
-      <div style="font-size:13px;color:#666;margin-bottom:16px">${datum}</div>
-      <ul style="font-size:14px;color:#333;line-height:1.6;padding-left:20px;margin:0">
-        ${lijstHTML}
-      </ul>
-    </div>
-  </div>
-</body>
-</html>`,
-  }).catch(e => console.error('[alert] Foutmail zelf mislukt:', e))
-}
-
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) {
-    return NextResponse.json({ error: 'CRON_SECRET niet ingesteld' }, { status: 500 })
-  }
-
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) return NextResponse.json({ error: 'CRON_SECRET niet ingesteld' }, { status: 500 })
+  if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const eersteWeek = isEersteMaandagVanMaand()
   const adminEmail = process.env.ADMIN_EMAIL
-  if (!adminEmail) {
-    return NextResponse.json({ error: 'ADMIN_EMAIL niet ingesteld' }, { status: 500 })
-  }
   const emailDomein = process.env.EMAIL_DOMEIN ?? 'brieft.online'
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+  if (!adminEmail) return NextResponse.json({ error: 'ADMIN_EMAIL niet ingesteld' }, { status: 500 })
+
+  // --- Check voor goedgekeurde concepten (vrijdagcron) ---
+  const zevenDagenGeleden = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: alleConcepten } = await supabase
+    .from('concept_nieuwsbrieven')
+    .select('*')
+    .gte('aangemaakt_op', zevenDagenGeleden)
+    .neq('status', 'geannuleerd')
+
+  const goedgekeurdeConcepten = (alleConcepten ?? []).filter(c => c.status === 'goedgekeurd')
+  const wachtendeConcepten = (alleConcepten ?? []).filter(c => c.status === 'in_afwachting')
+
+  if (wachtendeConcepten.length > 0 && goedgekeurdeConcepten.length === 0) {
+    await stuurAlertMail(
+      'Maandagcron: concepten niet goedgekeurd — geen verzending',
+      [
+        `Er staan ${wachtendeConcepten.length} concepten klaar maar je hebt ze nog niet goedgekeurd.`,
+        `Ga naar je mail van vrijdag en klik op "Goedkeuren" — of stuur handmatig via het admin-dashboard.`,
+        `Vandaag is er <strong>niets verstuurd</strong>.`,
+      ]
+    )
+    return NextResponse.json({ ok: true, mode: 'geblokkeerd', reden: 'wacht op goedkeuring', wachtend: wachtendeConcepten.length })
+  }
+
+  if (goedgekeurdeConcepten.length > 0) {
+    return stuurGoedgekeurdeConcepten(goedgekeurdeConcepten, emailDomein, baseUrl)
+  }
+
+  const alVerzonden = (alleConcepten ?? []).every(c => c.status === 'verzonden')
+  if (alVerzonden && (alleConcepten ?? []).length > 0) {
+    return NextResponse.json({ ok: true, mode: 'al-verzonden', reden: 'concepten deze week al verstuurd' })
+  }
+
+  // Geen concepten gevonden → fallback: volledige pipeline
+  if ((alleConcepten ?? []).length === 0) {
+    await stuurAlertMail('Maandagcron: vrijdagcron niet gedraaid — fallback naar directe pipeline', [
+      'Er zijn geen concepten gevonden uit de vrijdagcron.',
+      'De volledige pipeline draait nu als fallback.',
+    ])
+  }
+
+  return volledigePipeline(adminEmail, emailDomein, baseUrl)
+}
+
+async function stuurGoedgekeurdeConcepten(
+  concepten: Record<string, unknown>[],
+  emailDomein: string,
+  baseUrl: string
+) {
+  const verzonden: string[] = []
+  const fouten: { email: string; reden: string }[] = []
+
+  for (const concept of concepten) {
+    try {
+      const { error } = await resend.emails.send({
+        from: `Regelgeving Nieuwsbrief <newsletter@${emailDomein}>`,
+        to: concept.email as string,
+        subject: concept.onderwerp as string,
+        html: concept.html as string,
+      })
+      if (error) throw new Error(JSON.stringify(error))
+
+      await supabase
+        .from('concept_nieuwsbrieven')
+        .update({ status: 'verzonden' })
+        .eq('id', concept.id)
+
+      await supabase.from('nieuwsbrief_log').insert({
+        subscriber_id: concept.subscriber_id,
+        onderwerp: concept.onderwerp,
+        status: 'verstuurd',
+      })
+      await supabase
+        .from('subscribers')
+        .update({ laatste_mail_op: new Date().toISOString() })
+        .eq('id', concept.subscriber_id)
+
+      verzonden.push(concept.email as string)
+    } catch (err) {
+      const reden = err instanceof Error ? err.message : String(err)
+      fouten.push({ email: concept.email as string, reden })
+    }
+  }
+
+  if (fouten.length > 0) {
+    await stuurAlertMail(
+      `Maandagcron: ${fouten.length} fout${fouten.length !== 1 ? 'en' : ''} bij verzenden van goedgekeurde concepten`,
+      fouten.map(f => `${f.email} — <code>${f.reden}</code>`)
+    )
+  }
+
+  return NextResponse.json({ ok: true, mode: 'concepten', verzonden: verzonden.length, fouten: fouten.length })
+}
+
+async function volledigePipeline(adminEmail: string, emailDomein: string, baseUrl: string) {
+  const eersteWeek = isEersteMaandagVanMaand()
 
   const { data: abonnees, error: dbFout } = await supabase
     .from('subscribers')
@@ -66,35 +141,29 @@ export async function GET(req: NextRequest) {
     .eq('actief', true)
 
   if (dbFout || !abonnees) {
-    const melding = dbFout?.message ?? 'Geen data teruggekomen'
-    console.error('[cron] Supabase fetch mislukt:', melding)
-    await stuurFoutmelding('Cron job mislukt — database fout', [
-      `De cron job kon geen subscribers ophalen uit Supabase.`,
-      `Fout: <code>${melding}</code>`,
+    await stuurAlertMail('Cron job mislukt — database fout', [
+      `De cron job kon geen subscribers ophalen.`,
+      `Fout: <code>${dbFout?.message ?? 'Geen data'}</code>`,
     ])
     return NextResponse.json({ error: 'Database fout' }, { status: 500 })
   }
 
   const verzonden: string[] = []
   const overgeslagen: string[] = []
+  const geescaleerd: { email: string; aantalAfgekeurd: number }[] = []
   const fouten: { email: string; reden: string }[] = []
 
   for (const abonnee of abonnees) {
-    // Maandelijkse subscribers alleen in eerste week van de maand
     if (abonnee.frequentie === 'maandelijks' && !eersteWeek) {
       overgeslagen.push(abonnee.email)
       continue
     }
 
     try {
-      // Bronnen regenereren als leeg of ouder dan 7 dagen
       let bronnen: { naam: string; url: string }[] = abonnee.bronnen ?? []
       const gegenereerd = abonnee.bronnen_gegenereerd_op ? new Date(abonnee.bronnen_gegenereerd_op) : null
-      const zeveDagenGeleden = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      const bronnenVerouderd = !gegenereerd || gegenereerd < zeveDagenGeleden
-
-      if (bronnen.length === 0 || bronnenVerouderd) {
-        console.log(`[cron] Bronnen regenereren voor ${abonnee.email}`)
+      const zevenDagenGeleden = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      if (bronnen.length === 0 || !gegenereerd || gegenereerd < zevenDagenGeleden) {
         bronnen = await getBronnen(abonnee.vakgebied, {
           branche: abonnee.branche ?? undefined,
           extraOnderwerpen: abonnee.voorkeuren?.extraOnderwerpen ?? undefined,
@@ -107,82 +176,76 @@ export async function GET(req: NextRequest) {
           }).eq('id', abonnee.id)
         }
       }
-
-      if (bronnen.length === 0) {
-        overgeslagen.push(abonnee.email)
-        continue
-      }
+      if (bronnen.length === 0) { overgeslagen.push(abonnee.email); continue }
 
       const dagenTerug = abonnee.frequentie === 'maandelijks' ? 31 : 7
-      const artikelen = await fetchArtikelen(bronnen, dagenTerug)
+      const profiel = {
+        naam: abonnee.naam,
+        vakgebied: abonnee.vakgebied,
+        branche: abonnee.branche ?? undefined,
+        organisatie: abonnee.organisatie,
+        land: abonnee.land ?? 'NL',
+        voorkeuren: abonnee.voorkeuren ?? undefined,
+      }
+
+      const artikelen = await scoutAgent(bronnen, dagenTerug, abonnee.id)
+      if (artikelen.length === 0) { overgeslagen.push(abonnee.email); continue }
+
+      const vakgebiedContext = uitlegVakgebied(abonnee.vakgebied)
+      const geclassificeerd = await classificatieAgent(artikelen, vakgebiedContext, abonnee.id)
+      const redactieResultaat = await redactieAgent(geclassificeerd, profiel, abonnee.id)
+      if (!redactieResultaat) { overgeslagen.push(abonnee.email); continue }
+
+      const qc = await kwaliteitscontroleAgent(redactieResultaat, geclassificeerd, abonnee.id)
+      if (qc.afgekeurd.length > 0) geescaleerd.push({ email: abonnee.email, aantalAfgekeurd: qc.afgekeurd.length })
+      if (qc.goedgekeurd.length === 0) { overgeslagen.push(abonnee.email); continue }
+
       const beheerUrl = `${baseUrl}/voorkeuren?token=${abonnee.token}`
-
-      const resultaat = await genereerNieuwsbrief(
-        artikelen,
-        {
-          naam: abonnee.naam,
-          vakgebied: abonnee.vakgebied,
-          branche: abonnee.branche ?? undefined,
-          organisatie: abonnee.organisatie,
-          land: abonnee.land ?? 'NL',
-          voorkeuren: abonnee.voorkeuren ?? undefined,
-        },
-        beheerUrl
+      const verzendResultaat = await personalisatieEnVerzendAgent(
+        qc.goedgekeurd,
+        redactieResultaat.onderwerp,
+        profiel,
+        beheerUrl,
+        emailDomein,
+        abonnee.email,
+        abonnee.id
       )
+      if (!verzendResultaat.verzonden) throw new Error(verzendResultaat.reden ?? 'onbekende verzendfout')
 
-      if (!resultaat) {
-        overgeslagen.push(abonnee.email)
-        continue
-      }
-
-      // Verstuur naar subscriber
-      const { error: mailFout } = await resend.emails.send({
-        from: `Regelgeving Nieuwsbrief <newsletter@${emailDomein}>`,
-        to: abonnee.email,
-        subject: resultaat.onderwerp,
-        html: resultaat.html,
-      })
-
-      if (mailFout) {
-        throw new Error(`Resend fout: ${JSON.stringify(mailFout)}`)
-      }
+      await registreerGepubliceerdeItems(
+        qc.goedgekeurd.map(item => {
+          const bron = geclassificeerd.find(a => a.url === item.bronUrl)
+          return { item, bronSnapshot: bron?.samenvatting ?? item.samenvatting }
+        })
+      )
 
       await supabase.from('nieuwsbrief_log').insert({
         subscriber_id: abonnee.id,
-        onderwerp: resultaat.onderwerp,
+        onderwerp: redactieResultaat.onderwerp,
         status: 'verstuurd',
       })
-
       await supabase
         .from('subscribers')
         .update({ laatste_mail_op: new Date().toISOString() })
         .eq('id', abonnee.id)
 
       verzonden.push(abonnee.email)
-      console.log(`[cron] Verstuurd naar ${abonnee.email}`)
-
     } catch (err) {
       const reden = err instanceof Error ? err.message : String(err)
-      console.error(`[cron] Fout bij ${abonnee.email}:`, reden)
       fouten.push({ email: abonnee.email, reden })
     }
   }
 
-  if (fouten.length > 0) {
-    await stuurFoutmelding(
-      `Cron job: ${fouten.length} fout${fouten.length !== 1 ? 'en' : ''} bij versturen`,
+  if (fouten.length > 0 || geescaleerd.length > 0) {
+    await stuurAlertMail(
+      `Cron job: ${fouten.length} fout${fouten.length !== 1 ? 'en' : ''}, ${geescaleerd.length} escalatie${geescaleerd.length !== 1 ? 's' : ''}`,
       [
-        `${verzonden.length} van ${abonnees.length} abonnees verwerkt. ${overgeslagen.length} overgeslagen, ${fouten.length} mislukt.`,
-        `<strong>Mislukt voor:</strong>`,
-        ...fouten.map(f => `${f.email} — <code style="font-size:12px">${f.reden}</code>`),
+        `${verzonden.length} van ${abonnees.length} abonnees verwerkt. ${overgeslagen.length} overgeslagen.`,
+        ...(fouten.length > 0 ? [`<strong>Mislukt:</strong>`, ...fouten.map(f => `${f.email} — <code>${f.reden}</code>`)] : []),
+        ...(geescaleerd.length > 0 ? [`<strong>QC-afkeuringen:</strong>`, ...geescaleerd.map(g => `${g.email} — ${g.aantalAfgekeurd} item(s) afgekeurd`)] : []),
       ]
     )
   }
 
-  return NextResponse.json({
-    ok: true,
-    verzonden: verzonden.length,
-    overgeslagen: overgeslagen.length,
-    fouten: fouten.length,
-  })
+  return NextResponse.json({ ok: true, mode: 'pipeline', verzonden: verzonden.length, overgeslagen: overgeslagen.length, geescaleerd: geescaleerd.length, fouten: fouten.length })
 }
