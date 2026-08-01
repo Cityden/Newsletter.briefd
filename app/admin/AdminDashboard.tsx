@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import ArchitectuurMap from './ArchitectuurMap'
+import Link from 'next/link'
 
 const BRANCHE_OPTIES = [
   'Horeca & Toerisme', 'Detailhandel & Retail', 'Financiële dienstverlening',
@@ -62,7 +62,9 @@ interface LogRegel {
 }
 
 type SendStatus = 'idle' | 'laden' | 'succes' | 'geen-updates' | 'fout'
-type Tabblad = 'subscribers' | 'statistieken' | 'agents' | 'architectuur'
+// Architectuur is bewust geen tabblad meer maar een eigen pagina: de kaart
+// heeft het volledige scherm nodig om leesbaar te blijven.
+type Tabblad = 'subscribers' | 'statistieken' | 'agents'
 
 interface AgentRun {
   id: string
@@ -105,7 +107,6 @@ const TAB_LABELS: Record<Tabblad, string> = {
   subscribers: 'Subscribers',
   statistieken: 'Statistieken',
   agents: 'Agents',
-  architectuur: 'Architectuur',
 }
 
 // ── Herbruikbare bouwstenen ───────────────────────────────────────────────
@@ -498,6 +499,19 @@ export default function AdminDashboard() {
                 </button>
               )
             })}
+            <Link
+              className="tab"
+              href="/admin/architectuur"
+              style={{
+                fontFamily: 'inherit', fontSize: 13, fontWeight: 600, letterSpacing: '-.01em',
+                textDecoration: 'none', padding: '10px 14px', marginBottom: -1, whiteSpace: 'nowrap',
+                color: c.tekstFlets, borderBottom: '2px solid transparent',
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                transition: 'color .15s',
+              }}
+            >
+              Architectuur <span style={{ fontSize: 10, opacity: .7 }}>↗</span>
+            </Link>
           </div>
         </div>
 
@@ -931,17 +945,6 @@ export default function AdminDashboard() {
                 </>
               )
             })()}
-          </>
-        )}
-
-        {/* ── ARCHITECTUUR TAB ── */}
-        {tabblad === 'architectuur' && (
-          <>
-            <p style={{ fontSize: 12, color: c.tekstZacht, lineHeight: 1.7, margin: '0 0 20px', maxWidth: 640 }}>
-              Elk punt is een agent uit <code style={{ background: c.surfaceAlt, padding: '1px 6px', borderRadius: 4, color: c.tekst }}>lib/agents/</code>.
-              Klik op een node voor details. Grijze, stippellijn-verbonden nodes zijn nog niet gebouwd.
-            </p>
-            <ArchitectuurMap />
           </>
         )}
 

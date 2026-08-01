@@ -17,7 +17,11 @@ export async function POST(req: NextRequest) {
   const cookieStore = await cookies()
   cookieStore.set('admin_session', sessionToken(adminPassword), {
     httpOnly: true,
-    secure: true,
+    // Alleen over HTTPS. In dev draait de server op http://localhost en weigert
+    // Safari een Secure-cookie op te slaan — de login lijkt dan te mislukken
+    // terwijl het wachtwoord klopt. Chromium accepteert hem daar juist wel,
+    // dus dit valt niet op als je alleen in Chrome test.
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 60 * 60 * 8, // 8 uur
     path: '/',
