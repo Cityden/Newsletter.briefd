@@ -37,8 +37,10 @@ export const BRONNEN: Bron[] = [
   {
     id: 'rss',
     naam: 'RSS-bronnen',
-    detail: '97 feeds · 16 landen',
-    toelichting: 'De feedlijst in lib/sources.ts, per land en vakgebied. Opgehaald door lib/fetcher.ts.',
+    // Handmatig geteld uit lib/sources.ts. Werk dit bij als je de catalogus
+    // wijzigt; `npm run check:bronnen` laat zien wat er nog leeft.
+    detail: '28 feeds · 16 landen',
+    toelichting: 'De geverifieerde feedlijst in lib/sources.ts, per land en vakgebied. Opgehaald door lib/fetcher.ts.',
     hoek: 0,
   },
   {
