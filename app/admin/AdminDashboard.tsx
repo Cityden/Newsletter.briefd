@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ArchitectuurMap from './ArchitectuurMap'
 
 const BRANCHE_OPTIES = [
   'Horeca & Toerisme', 'Detailhandel & Retail', 'Financiële dienstverlening',
@@ -13,6 +14,25 @@ const BRANCHE_OPTIES = [
 // Geschatte kosten per verstuurde nieuwsbrief (Claude Sonnet API + Resend)
 // Claude Sonnet 4.6: ~4000 input tokens × $3/MTok + ~2000 output tokens × $15/MTok ≈ $0.042 ≈ €0.039
 const KOSTEN_PER_MAIL_EUR = 0.04
+
+// ── Designtokens ──────────────────────────────────────────────────────────
+// Eén bron van waarheid voor kleur en ruimte. De oude waarden (#333 tekst op
+// #111 achtergrond) haalden nergens leesbaar contrast; deze schaal wel.
+const c = {
+  bg: '#0a0a0a',
+  surface: '#101010',
+  surfaceAlt: '#151515',
+  border: '#212121',
+  borderSoft: '#191919',
+  tekst: '#eceae6',
+  tekstZacht: '#9b9b95',
+  tekstFlets: '#63635e',
+  accent: '#4ade80',
+  accentZacht: 'rgba(74,222,128,.1)',
+  accentRand: 'rgba(74,222,128,.24)',
+  waarschuwing: '#facc15',
+  fout: '#f87171',
+}
 
 interface Subscriber {
   id: string
@@ -32,7 +52,7 @@ interface LogRegel {
   subscriber_id: string
   onderwerp: string
   status: string
-  created_at: string
+  verstuurd_op: string
   subscribers: {
     naam: string
     email: string
@@ -42,7 +62,157 @@ interface LogRegel {
 }
 
 type SendStatus = 'idle' | 'laden' | 'succes' | 'geen-updates' | 'fout'
-type Tabblad = 'subscribers' | 'statistieken'
+type Tabblad = 'subscribers' | 'statistieken' | 'agents' | 'architectuur'
+
+interface AgentRun {
+  id: string
+  agent: string
+  input_ref: string
+  status: 'gelukt' | 'mislukt' | 'geëscaleerd'
+  reden: string | null
+  output: Record<string, unknown> | null
+  duration_ms: number | null
+  aangemaakt_op: string
+}
+
+interface Rectificatie {
+  id: string
+  titel: string
+  bron_naam: string
+  bron_url: string
+  rectificatie_notitie: string | null
+  laatst_gecontroleerd_op: string | null
+}
+
+interface ConceptRegel {
+  batch_token: string
+  status: string
+  naam: string
+  email: string
+  onderwerp: string
+  aangemaakt_op: string
+  items_preview: { titel: string; impact: string; bronNaam: string }[] | null
+}
+
+interface AgentsData {
+  recenteRuns: AgentRun[]
+  rectificaties: Rectificatie[]
+  concepten: ConceptRegel[]
+  fouten?: string[]
+}
+
+const TAB_LABELS: Record<Tabblad, string> = {
+  subscribers: 'Subscribers',
+  statistieken: 'Statistieken',
+  agents: 'Agents',
+  architectuur: 'Architectuur',
+}
+
+// ── Herbruikbare bouwstenen ───────────────────────────────────────────────
+
+function Kaart({ titel, extra, actie, children, style }: {
+  titel?: string
+  extra?: React.ReactNode
+  actie?: React.ReactNode
+  children: React.ReactNode
+  style?: React.CSSProperties
+}) {
+  return (
+    <section style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 14, overflow: 'hidden', ...style }}>
+      {titel && (
+        <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: `1px solid ${c.borderSoft}` }}>
+          <h2 style={{ fontSize: 13, fontWeight: 600, color: c.tekst, margin: 0, letterSpacing: '-.01em' }}>{titel}</h2>
+          {extra}
+          <div style={{ marginLeft: 'auto' }}>{actie}</div>
+        </header>
+      )}
+      {children}
+    </section>
+  )
+}
+
+function StatKaart({ waarde, label, klein }: { waarde: React.ReactNode; label: string; klein?: boolean }) {
+  return (
+    <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 12, padding: '16px 18px' }}>
+      <div style={{
+        fontFamily: klein ? "'DM Sans', sans-serif" : "'DM Serif Display', serif",
+        fontSize: klein ? 22 : 30, fontWeight: klein ? 700 : 400,
+        color: c.accent, lineHeight: 1.1, marginBottom: 6, letterSpacing: '-.02em',
+      }}>
+        {waarde}
+      </div>
+      <div style={{ fontSize: 11, color: c.tekstZacht, fontWeight: 500, letterSpacing: '.01em' }}>{label}</div>
+    </div>
+  )
+}
+
+function Badge({ kleur, achtergrond, rand, children }: {
+  kleur: string; achtergrond: string; rand: string; children: React.ReactNode
+}) {
+  return (
+    <span style={{
+      display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 20,
+      background: achtergrond, border: `1px solid ${rand}`, color: kleur, whiteSpace: 'nowrap',
+      letterSpacing: '.02em',
+    }}>
+      {children}
+    </span>
+  )
+}
+
+function FrequentieBadge({ frequentie }: { frequentie: string }) {
+  const wekelijks = frequentie === 'wekelijks'
+  return (
+    <Badge
+      kleur={wekelijks ? c.accent : c.tekstZacht}
+      achtergrond={wekelijks ? c.accentZacht : 'rgba(255,255,255,.04)'}
+      rand={wekelijks ? c.accentRand : c.border}
+    >
+      {frequentie}
+    </Badge>
+  )
+}
+
+function Kop({ kolommen }: { kolommen: string[] }) {
+  return (
+    <thead>
+      <tr>
+        {kolommen.map(kol => (
+          <th key={kol} style={{
+            textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: c.tekstFlets,
+            textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: `1px solid ${c.borderSoft}`,
+            whiteSpace: 'nowrap', background: c.surfaceAlt,
+          }}>
+            {kol}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  )
+}
+
+function Leeg({ kolommen, children }: { kolommen: number; children: React.ReactNode }) {
+  return (
+    <tr>
+      <td colSpan={kolommen} style={{ padding: '48px 16px', textAlign: 'center', color: c.tekstFlets, fontSize: 13 }}>
+        {children}
+      </td>
+    </tr>
+  )
+}
+
+function Foutbalk({ titel, children }: { titel: string; children: React.ReactNode }) {
+  return (
+    <div style={{ background: 'rgba(248,113,113,.05)', border: '1px solid rgba(248,113,113,.18)', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: c.fout, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>{titel}</div>
+      <div style={{ fontSize: 12.5, color: c.tekstZacht, lineHeight: 1.6, wordBreak: 'break-word' }}>{children}</div>
+    </div>
+  )
+}
+
+const cel: React.CSSProperties = {
+  padding: '12px 16px', borderBottom: `1px solid ${c.borderSoft}`, color: c.tekstZacht, verticalAlign: 'middle',
+}
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -52,9 +222,14 @@ export default function AdminDashboard() {
   const [laden, setLaden] = useState(true)
   const [statsLaden, setStatsLaden] = useState(false)
   const [fout, setFout] = useState('')
+  const [statsFout, setStatsFout] = useState('')
+  const [agentsFout, setAgentsFout] = useState('')
+  const [zoek, setZoek] = useState('')
   const [sendStatus, setSendStatus] = useState<Record<string, SendStatus>>({})
   const [sendDetail, setSendDetail] = useState<Record<string, string>>({})
   const [sendBestemming, setSendBestemming] = useState<Record<string, 'admin' | 'subscriber' | 'beide'>>({})
+  const [agentsData, setAgentsData] = useState<AgentsData | null>(null)
+  const [agentsLaden, setAgentsLaden] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/subscribers')
@@ -70,12 +245,35 @@ export default function AdminDashboard() {
   }, [router])
 
   useEffect(() => {
+    if (tabblad !== 'agents' || agentsData) return
+    setAgentsLaden(true)
+    setAgentsFout('')
+    fetch('/api/admin/agents')
+      .then(async r => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
+        return data as AgentsData
+      })
+      .then(data => {
+        setAgentsData(data)
+        if (data.fouten?.length) setAgentsFout(data.fouten.join(' · '))
+        setAgentsLaden(false)
+      })
+      .catch(e => { setAgentsFout(e.message ?? 'Laden mislukt'); setAgentsLaden(false) })
+  }, [tabblad, agentsData])
+
+  useEffect(() => {
     if (tabblad !== 'statistieken' || logRegels.length > 0) return
     setStatsLaden(true)
+    setStatsFout('')
     fetch('/api/admin/stats')
-      .then(r => r.json())
+      .then(async r => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
+        return data
+      })
       .then(data => { setLogRegels(Array.isArray(data) ? data : []); setStatsLaden(false) })
-      .catch(() => setStatsLaden(false))
+      .catch(e => { setStatsFout(e.message ?? 'Laden mislukt'); setStatsLaden(false) })
   }, [tabblad, logRegels.length])
 
   async function verstuurNieuwsbrief(email: string) {
@@ -196,11 +394,20 @@ export default function AdminDashboard() {
   }
 
   function formatBedrag(eur: number) {
-    return `€\u00A0${eur.toFixed(2)}`
+    return `\u20AC\u00A0${eur.toFixed(2)}`
   }
 
   const actief = subscribers.filter(s => s.actief)
   const inactief = subscribers.filter(s => !s.actief)
+
+  const zichtbareSubscribers = useMemo(() => {
+    const q = zoek.trim().toLowerCase()
+    if (!q) return subscribers
+    return subscribers.filter(s =>
+      [s.naam, s.email, s.vakgebied, s.branche ?? '', s.organisatie]
+        .some(v => v.toLowerCase().includes(q))
+    )
+  }, [subscribers, zoek])
 
   // Stats berekeningen
   const totaalMails = logRegels.length
@@ -224,66 +431,80 @@ export default function AdminDashboard() {
   const subscriberStats = Object.values(perSubscriber).sort((a, b) => b.aantal - a.aantal)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', padding: '0 0 60px', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: c.bg, padding: '0 0 80px', fontFamily: "'DM Sans', sans-serif", color: c.tekst }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
-        select option { background: #1a1a1a; color: #e8e8e6; }
+        select option { background: #151515; color: ${c.tekst}; }
+        .tabel-rij { transition: background .12s; }
+        .tabel-rij:hover { background: #131313; }
+        .knop-zacht { transition: border-color .15s, color .15s, background .15s; }
+        .knop-zacht:hover { border-color: #333 !important; color: ${c.tekst} !important; }
+        .knop-accent { transition: background .15s, opacity .15s; }
+        .knop-accent:hover:not(:disabled) { background: #86efac !important; }
+        .knop-gevaar:hover { border-color: rgba(248,113,113,.35) !important; color: ${c.fout} !important; }
+        .tab:hover { color: ${c.tekst} !important; }
+        .veld:focus { outline: none; border-color: #2f2f2f !important; }
+        .zoekveld::placeholder { color: ${c.tekstFlets}; }
+        a.bron:hover { text-decoration: underline; }
+        @media (max-width: 860px) {
+          .schil { padding: 0 1.1rem !important; }
+          .kop-rij { flex-direction: column !important; align-items: stretch !important; gap: 16px !important; }
+          .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .tabs { overflow-x: auto !important; }
+        }
       `}</style>
 
       {/* Nav */}
-      <nav style={{ borderBottom: '1px solid #1a1a1a', padding: '0 2rem', marginBottom: 40 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: "'DM Serif Display'", fontSize: 18, color: '#e8e8e6', letterSpacing: '-.2px' }}>◈ Brieft</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ fontSize: 11, color: '#333', fontWeight: 500 }}>Admin dashboard</span>
-            <button
-              style={{ background: 'transparent', border: '1px solid #1e1e1e', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', color: '#555', fontFamily: 'inherit' }}
-              onClick={uitloggen}
-            >
-              Uitloggen
-            </button>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,10,10,.92)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${c.borderSoft}`, padding: '0 2rem' }}>
+        <div className="schil" style={{ maxWidth: 1240, margin: '0 auto', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+            <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 19, color: c.tekst, letterSpacing: '-.2px' }}>◈ Brieft</span>
+            <span style={{ fontSize: 11, color: c.tekstFlets, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' }}>Admin</span>
           </div>
+          <button
+            className="knop-zacht"
+            style={{ background: 'transparent', border: `1px solid ${c.border}`, borderRadius: 8, padding: '6px 14px', fontSize: 12, cursor: 'pointer', color: c.tekstZacht, fontFamily: 'inherit' }}
+            onClick={uitloggen}
+          >
+            Uitloggen
+          </button>
         </div>
       </nav>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 2rem' }}>
+      <div className="schil" style={{ maxWidth: 1240, margin: '0 auto', padding: '0 2rem' }}>
 
-        {/* Header + tabs */}
-        <div style={{ marginBottom: 32, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>Beheer</div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {(['subscribers', 'statistieken'] as Tabblad[]).map(t => (
+        {/* Titel + tabs */}
+        <div style={{ padding: '36px 0 20px' }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 34, fontWeight: 400, color: c.tekst, margin: '0 0 20px', letterSpacing: '-.5px' }}>
+            Dashboard
+          </h1>
+          <div className="tabs" style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${c.borderSoft}` }}>
+            {(Object.keys(TAB_LABELS) as Tabblad[]).map(t => {
+              const aan = tabblad === t
+              return (
                 <button
                   key={t}
+                  className="tab"
                   onClick={() => setTabblad(t)}
                   style={{
-                    fontFamily: "'DM Serif Display'", fontSize: 24, fontWeight: 400, letterSpacing: '-.3px',
-                    background: 'transparent', border: 'none', cursor: 'pointer', padding: '0 12px 0 0',
-                    color: tabblad === t ? '#f0f0ee' : '#2a2a2a',
-                    transition: 'color .15s',
+                    fontFamily: 'inherit', fontSize: 13, fontWeight: 600, letterSpacing: '-.01em',
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    padding: '10px 14px', marginBottom: -1, whiteSpace: 'nowrap',
+                    color: aan ? c.tekst : c.tekstFlets,
+                    borderBottom: `2px solid ${aan ? c.accent : 'transparent'}`,
+                    transition: 'color .15s, border-color .15s',
                   }}
                 >
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                  {TAB_LABELS[t]}
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
-          {tabblad === 'subscribers' && (
-            <button
-              onClick={exporteerCSV}
-              disabled={laden || subscribers.length === 0}
-              style={{ fontSize: 12, fontWeight: 600, padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: '#4ade80', border: '1px solid rgba(74,222,128,.25)', opacity: laden ? 0.4 : 1 }}
-            >
-              Exporteer CSV
-            </button>
-          )}
         </div>
 
         {/* ── SUBSCRIBERS TAB ── */}
         {tabblad === 'subscribers' && (
           <>
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 32 }}>
+            <div className="stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
               {[
                 { getal: subscribers.length, tekst: 'Totaal aangemeld' },
                 { getal: actief.length, tekst: 'Actief' },
@@ -291,98 +512,106 @@ export default function AdminDashboard() {
                 { getal: actief.filter(s => s.frequentie === 'wekelijks').length, tekst: 'Wekelijks' },
                 { getal: actief.filter(s => s.frequentie === 'maandelijks').length, tekst: 'Maandelijks' },
               ].map(({ getal, tekst }) => (
-                <div key={tekst} style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 12, padding: '16px 20px' }}>
-                  <div style={{ fontFamily: "'DM Serif Display'", fontSize: 28, color: '#4ade80', lineHeight: 1, marginBottom: 6 }}>{laden ? '—' : getal}</div>
-                  <div style={{ fontSize: 11, color: '#333', fontWeight: 500 }}>{tekst}</div>
-                </div>
+                <StatKaart key={tekst} waarde={laden ? '—' : getal} label={tekst} />
               ))}
             </div>
 
-            {/* Tabel */}
-            <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid #1a1a1a' }}>
-                <h2 style={{ fontSize: 14, fontWeight: 600, color: '#d8d8d6', margin: 0 }}>Alle subscribers</h2>
-                {laden && <span style={{ fontSize: 12, color: '#333' }}>Laden…</span>}
-                {fout && <span style={{ fontSize: 12, color: '#f87171' }}>{fout}</span>}
-              </div>
-
+            <Kaart
+              titel="Alle subscribers"
+              extra={
+                <>
+                  {laden && <span style={{ fontSize: 12, color: c.tekstFlets }}>Laden…</span>}
+                  {fout && <span style={{ fontSize: 12, color: c.fout }}>{fout}</span>}
+                  {!laden && !fout && (
+                    <span style={{ fontSize: 12, color: c.tekstFlets }}>
+                      {zichtbareSubscribers.length}{zoek ? ` van ${subscribers.length}` : ''}
+                    </span>
+                  )}
+                </>
+              }
+              actie={
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    className="veld zoekveld"
+                    value={zoek}
+                    onChange={e => setZoek(e.target.value)}
+                    placeholder="Zoeken…"
+                    style={{ fontFamily: 'inherit', fontSize: 12, padding: '7px 11px', borderRadius: 8, border: `1px solid ${c.border}`, background: c.bg, color: c.tekst, width: 150 }}
+                  />
+                  <button
+                    className="knop-zacht"
+                    onClick={exporteerCSV}
+                    disabled={laden || subscribers.length === 0}
+                    style={{ fontSize: 12, fontWeight: 600, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: c.accent, border: `1px solid ${c.accentRand}`, opacity: laden || subscribers.length === 0 ? 0.4 : 1, whiteSpace: 'nowrap' }}
+                  >
+                    Exporteer CSV
+                  </button>
+                </div>
+              }
+            >
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead>
-                    <tr>
-                      {['Naam', 'E-mail', 'Vakgebied', 'Branche', 'Frequentie', 'Datums', 'Actie'].map(kol => (
-                        <th key={kol} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: '#333', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid #1a1a1a', whiteSpace: 'nowrap' }}>
-                          {kol}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
+                  <Kop kolommen={['Subscriber', 'Vakgebied', 'Branche', 'Ritme', 'Datums', 'Testverzending', '']} />
                   <tbody>
-                    {subscribers.map(sub => {
+                    {zichtbareSubscribers.map(sub => {
                       const status = sendStatus[sub.email] ?? 'idle'
+                      const bestemming = sendBestemming[sub.email] ?? 'admin'
+                      const volgende = sub.actief ? volgendeMailDatum(sub) : null
                       return (
-                        <tr key={sub.id} style={{ opacity: sub.actief ? 1 : 0.4 }}>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#d8d8d6', fontWeight: 600, whiteSpace: 'nowrap' }}>{sub.naam}</td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#444', fontSize: 12 }}>{sub.email}</td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#888', maxWidth: 140 }}>{sub.vakgebied}</td>
-                          <td style={{ padding: '8px 16px', borderBottom: '1px solid #141414', minWidth: 180 }}>
+                        <tr key={sub.id} className="tabel-rij" style={{ opacity: sub.actief ? 1 : 0.45 }}>
+                          {/* Naam + e-mail samen — scheelt een kolom en leest als één identiteit */}
+                          <td style={{ ...cel, whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: sub.actief ? c.accent : c.tekstFlets }} />
+                              <div>
+                                <div style={{ color: c.tekst, fontWeight: 600 }}>{sub.naam}</div>
+                                <div style={{ color: c.tekstFlets, fontSize: 11.5, marginTop: 1 }}>{sub.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ ...cel, maxWidth: 150 }}>{sub.vakgebied}</td>
+                          <td style={{ ...cel, padding: '8px 16px', minWidth: 170 }}>
                             <select
+                              className="veld"
                               value={sub.branche ?? ''}
                               onChange={e => updateBranche(sub.id, e.target.value)}
-                              style={{ fontSize: 12, padding: '5px 8px', borderRadius: 6, border: '1px solid #1e1e1e', background: '#0e0e0e', color: sub.branche ? '#888' : '#333', fontFamily: 'inherit', cursor: 'pointer', width: '100%' }}
+                              style={{ fontSize: 12, padding: '6px 8px', borderRadius: 7, border: `1px solid ${c.border}`, background: c.bg, color: sub.branche ? c.tekstZacht : c.tekstFlets, fontFamily: 'inherit', cursor: 'pointer', width: '100%' }}
                             >
                               <option value="">— Geen branche —</option>
                               {BRANCHE_OPTIES.map(b => <option key={b} value={b}>{b}</option>)}
                             </select>
                           </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
-                            <span style={{
-                              display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
-                              background: sub.frequentie === 'wekelijks' ? 'rgba(74,222,128,.08)' : 'rgba(255,255,255,.04)',
-                              border: sub.frequentie === 'wekelijks' ? '1px solid rgba(74,222,128,.2)' : '1px solid #222',
-                              color: sub.frequentie === 'wekelijks' ? '#4ade80' : '#555',
-                            }}>
-                              {sub.frequentie}
-                            </span>
+                          <td style={cel}><FrequentieBadge frequentie={sub.frequentie} /></td>
+                          <td style={{ ...cel, whiteSpace: 'nowrap', fontSize: 11.5, lineHeight: 1.7 }}>
+                            <div style={{ color: c.tekstFlets }}>↗ aangemeld {formatDatum(sub.aangemeld_op)}</div>
+                            <div style={{ color: sub.laatste_mail_op ? c.tekstZacht : c.tekstFlets }}>✉ laatste {formatDatum(sub.laatste_mail_op)}</div>
+                            {volgende && <div style={{ color: c.accent }}>→ volgende {formatDatum(volgende.toISOString())}</div>}
                           </td>
-                          <td style={{ padding: '10px 16px', borderBottom: '1px solid #141414', whiteSpace: 'nowrap' }}>
-                            <div style={{ fontSize: 11, color: '#444' }}>↗ {formatDatum(sub.aangemeld_op)}</div>
-                            <div style={{ fontSize: 11, color: sub.laatste_mail_op ? '#4ade80' : '#2a2a2a', marginTop: 3 }}>✉ {formatDatum(sub.laatste_mail_op)}</div>
-                            {sub.actief && (() => {
-                              const volgende = volgendeMailDatum(sub)
-                              return volgende ? (
-                                <div style={{ fontSize: 11, color: '#555', marginTop: 3 }}>→ {formatDatum(volgende.toISOString())}</div>
-                              ) : null
-                            })()}
-                          </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              {sub.actief && (
-                                <div>
-                                  {/* Bestemming toggle */}
-                                  <div style={{ display: 'flex', marginBottom: 10, background: '#141414', borderRadius: 8, padding: 4, border: '1px solid #222' }}>
-                                    {(['admin', 'subscriber', 'beide'] as const).map(opt => {
-                                      const labels = { admin: 'Ikzelf', subscriber: 'Abonnee', beide: 'Beide' }
-                                      const actief = (sendBestemming[sub.email] ?? 'admin') === opt
-                                      return (
-                                        <button
-                                          key={opt}
-                                          onClick={() => setSendBestemming(s => ({ ...s, [sub.email]: opt }))}
-                                          style={{ flex: 1, fontSize: 11, fontWeight: 600, padding: '7px 4px', borderRadius: 5, border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s', background: actief ? '#4ade80' : 'transparent', color: actief ? '#0a0a0a' : '#555' }}
-                                        >
-                                          {labels[opt]}
-                                        </button>
-                                      )
-                                    })}
-                                  </div>
+                          {/* Testverzending: bestemming + knop naast elkaar in plaats van
+                              een gestapeld mini-formulier per rij */}
+                          <td style={{ ...cel, minWidth: 230 }}>
+                            {sub.actief ? (
+                              <>
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                  <select
+                                    className="veld"
+                                    value={bestemming}
+                                    onChange={e => setSendBestemming(s => ({ ...s, [sub.email]: e.target.value as 'admin' | 'subscriber' | 'beide' }))}
+                                    style={{ fontSize: 12, padding: '6px 8px', borderRadius: 7, border: `1px solid ${c.border}`, background: c.bg, color: c.tekstZacht, fontFamily: 'inherit', cursor: 'pointer' }}
+                                  >
+                                    <option value="admin">Naar mijzelf</option>
+                                    <option value="subscriber">Naar abonnee</option>
+                                    <option value="beide">Naar beiden</option>
+                                  </select>
                                   <button
+                                    className="knop-accent"
                                     style={{
-                                      fontSize: 11, fontWeight: 700, padding: '6px 14px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', width: '100%',
+                                      fontSize: 11.5, fontWeight: 700, padding: '7px 12px', borderRadius: 7, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', flexShrink: 0,
                                       opacity: status === 'laden' ? 0.5 : 1,
-                                      background: status === 'succes' ? 'rgba(74,222,128,.1)' : status === 'fout' ? 'rgba(248,113,113,.1)' : status === 'geen-updates' ? '#181818' : '#4ade80',
-                                      color: status === 'succes' ? '#4ade80' : status === 'fout' ? '#f87171' : status === 'geen-updates' ? '#444' : '#0a0a0a',
-                                      border: status === 'succes' ? '1px solid rgba(74,222,128,.2)' : status === 'fout' ? '1px solid rgba(248,113,113,.2)' : status === 'geen-updates' ? '1px solid #222' : '1px solid transparent',
-                                    } as React.CSSProperties}
+                                      background: status === 'succes' ? c.accentZacht : status === 'fout' ? 'rgba(248,113,113,.1)' : status === 'geen-updates' ? c.surfaceAlt : c.accent,
+                                      color: status === 'succes' ? c.accent : status === 'fout' ? c.fout : status === 'geen-updates' ? c.tekstZacht : c.bg,
+                                      border: `1px solid ${status === 'succes' ? c.accentRand : status === 'fout' ? 'rgba(248,113,113,.25)' : status === 'geen-updates' ? c.border : 'transparent'}`,
+                                    }}
                                     onClick={() => verstuurNieuwsbrief(sub.email)}
                                     disabled={status === 'laden'}
                                   >
@@ -392,173 +621,327 @@ export default function AdminDashboard() {
                                       : status === 'fout' ? '✗ Fout'
                                       : 'Verstuur'}
                                   </button>
-                                  {sendDetail[sub.email] && (
-                                    <div style={{ fontSize: 11, color: status === 'fout' ? '#f87171' : '#333', marginTop: 4, maxWidth: 160 }}>
-                                      {sendDetail[sub.email]}
-                                    </div>
-                                  )}
                                 </div>
-                              )}
-                              <button
-                                style={{ fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', background: 'transparent', color: '#333', border: '1px solid #1e1e1e' }}
-                                onClick={() => verwijderSubscriber(sub.id, sub.naam)}
-                              >
-                                Verwijder
-                              </button>
-                            </div>
+                                {sendDetail[sub.email] && (
+                                  <div style={{ fontSize: 11, color: status === 'fout' ? c.fout : c.tekstFlets, marginTop: 6, maxWidth: 230, lineHeight: 1.5 }}>
+                                    {sendDetail[sub.email]}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <Badge kleur={c.tekstZacht} achtergrond="rgba(255,255,255,.04)" rand={c.border}>uitgeschreven</Badge>
+                            )}
+                          </td>
+                          <td style={{ ...cel, textAlign: 'right' }}>
+                            <button
+                              className="knop-zacht knop-gevaar"
+                              title={`${sub.naam} verwijderen`}
+                              style={{ fontSize: 13, lineHeight: 1, padding: '6px 9px', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: c.tekstFlets, border: `1px solid ${c.border}` }}
+                              onClick={() => verwijderSubscriber(sub.id, sub.naam)}
+                            >
+                              ✕
+                            </button>
                           </td>
                         </tr>
                       )
                     })}
                     {!laden && subscribers.length === 0 && (
-                      <tr>
-                        <td colSpan={7} style={{ padding: '40px 16px', textAlign: 'center', color: '#2a2a2a', fontSize: 13 }}>
-                          Nog geen subscribers aangemeld.
-                        </td>
-                      </tr>
+                      <Leeg kolommen={7}>Nog geen subscribers aangemeld.</Leeg>
+                    )}
+                    {!laden && subscribers.length > 0 && zichtbareSubscribers.length === 0 && (
+                      <Leeg kolommen={7}>Geen resultaten voor “{zoek}”.</Leeg>
                     )}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Kaart>
           </>
         )}
 
         {/* ── STATISTIEKEN TAB ── */}
         {tabblad === 'statistieken' && (
           <>
-            {/* Totaal-overzicht */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 32 }}>
+            {statsFout && <Foutbalk titel="Statistieken laden mislukt">{statsFout}</Foutbalk>}
+            <div className="stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 20 }}>
               {[
                 { getal: statsLaden ? '—' : totaalMails.toString(), tekst: 'Totaal verstuurde mails' },
                 { getal: statsLaden ? '—' : subscriberStats.length.toString(), tekst: 'Unieke ontvangers' },
                 { getal: statsLaden ? '—' : formatBedrag(totaleKosten), tekst: 'Geschatte totale kosten*', klein: true },
               ].map(({ getal, tekst, klein }) => (
-                <div key={tekst} style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 12, padding: '16px 20px' }}>
-                  <div style={{ fontFamily: klein ? "'DM Sans'" : "'DM Serif Display'", fontSize: klein ? 22 : 28, fontWeight: klein ? 700 : 400, color: '#4ade80', lineHeight: 1, marginBottom: 6 }}>{getal}</div>
-                  <div style={{ fontSize: 11, color: '#333', fontWeight: 500 }}>{tekst}</div>
-                </div>
+                <StatKaart key={tekst} waarde={getal} label={tekst} klein={klein} />
               ))}
             </div>
 
-            {/* Per-subscriber tabel */}
-            <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 14, marginBottom: 16 }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <h2 style={{ fontSize: 14, fontWeight: 600, color: '#d8d8d6', margin: 0 }}>Mails per persoon</h2>
-                {statsLaden && <span style={{ fontSize: 12, color: '#333' }}>Laden…</span>}
-              </div>
+            <Kaart
+              titel="Mails per persoon"
+              extra={statsLaden ? <span style={{ fontSize: 12, color: c.tekstFlets }}>Laden…</span> : null}
+              style={{ marginBottom: 16 }}
+            >
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead>
-                    <tr>
-                      {['Naam', 'E-mail', 'Vakgebied', 'Frequentie', 'Mails verstuurd', 'Geschatte kosten*'].map(kol => (
-                        <th key={kol} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: '#333', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid #1a1a1a', whiteSpace: 'nowrap' }}>
-                          {kol}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
+                  <Kop kolommen={['Naam', 'E-mail', 'Vakgebied', 'Frequentie', 'Mails verstuurd', 'Geschatte kosten*']} />
                   <tbody>
                     {subscriberStats.map((s, i) => (
-                      <tr key={i}>
-                        <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#d8d8d6', fontWeight: 600, whiteSpace: 'nowrap' }}>{s.naam}</td>
-                        <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#444', fontSize: 12 }}>{s.email}</td>
-                        <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#888' }}>{s.vakgebied}</td>
-                        <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
-                          <span style={{
-                            display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
-                            background: s.frequentie === 'wekelijks' ? 'rgba(74,222,128,.08)' : 'rgba(255,255,255,.04)',
-                            border: s.frequentie === 'wekelijks' ? '1px solid rgba(74,222,128,.2)' : '1px solid #222',
-                            color: s.frequentie === 'wekelijks' ? '#4ade80' : '#555',
-                          }}>
-                            {s.frequentie}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontFamily: "'DM Serif Display'", fontSize: 20, color: '#f0f0ee' }}>{s.aantal}</span>
-                            <div style={{ flex: 1, maxWidth: 80, height: 4, borderRadius: 2, background: '#1a1a1a', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', borderRadius: 2, background: '#4ade80', width: `${Math.min(100, (s.aantal / (subscriberStats[0]?.aantal || 1)) * 100)}%` }} />
+                      <tr key={i} className="tabel-rij">
+                        <td style={{ ...cel, color: c.tekst, fontWeight: 600, whiteSpace: 'nowrap' }}>{s.naam}</td>
+                        <td style={{ ...cel, color: c.tekstFlets, fontSize: 12 }}>{s.email}</td>
+                        <td style={cel}>{s.vakgebied}</td>
+                        <td style={cel}><FrequentieBadge frequentie={s.frequentie} /></td>
+                        <td style={cel}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: c.tekst, minWidth: 22 }}>{s.aantal}</span>
+                            <div style={{ flex: 1, maxWidth: 90, height: 4, borderRadius: 2, background: c.surfaceAlt, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', borderRadius: 2, background: c.accent, width: `${Math.min(100, (s.aantal / (subscriberStats[0]?.aantal || 1)) * 100)}%` }} />
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '12px 16px', borderBottom: '1px solid #141414', color: '#888', fontWeight: 600, fontSize: 13 }}>
-                          {formatBedrag(s.aantal * KOSTEN_PER_MAIL_EUR)}
-                        </td>
+                        <td style={{ ...cel, fontWeight: 600 }}>{formatBedrag(s.aantal * KOSTEN_PER_MAIL_EUR)}</td>
                       </tr>
                     ))}
-                    {/* Totaalrij */}
                     {subscriberStats.length > 0 && (
-                      <tr style={{ background: '#0e0e0e' }}>
-                        <td colSpan={4} style={{ padding: '12px 16px', color: '#555', fontSize: 12, fontWeight: 600 }}>Totaal</td>
+                      <tr style={{ background: c.surfaceAlt }}>
+                        <td colSpan={4} style={{ padding: '12px 16px', color: c.tekstZacht, fontSize: 12, fontWeight: 600 }}>Totaal</td>
                         <td style={{ padding: '12px 16px' }}>
-                          <span style={{ fontFamily: "'DM Serif Display'", fontSize: 20, color: '#4ade80' }}>{totaalMails}</span>
+                          <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: c.accent }}>{totaalMails}</span>
                         </td>
-                        <td style={{ padding: '12px 16px', color: '#4ade80', fontWeight: 700, fontSize: 13 }}>
-                          {formatBedrag(totaleKosten)}
-                        </td>
+                        <td style={{ padding: '12px 16px', color: c.accent, fontWeight: 700, fontSize: 13 }}>{formatBedrag(totaleKosten)}</td>
                       </tr>
                     )}
                     {!statsLaden && subscriberStats.length === 0 && (
-                      <tr>
-                        <td colSpan={6} style={{ padding: '40px 16px', textAlign: 'center', color: '#2a2a2a', fontSize: 13 }}>
-                          Nog geen mails verstuurd.
-                        </td>
-                      </tr>
+                      <Leeg kolommen={6}>Nog geen mails verstuurd.</Leeg>
                     )}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Kaart>
 
-            {/* Recente log */}
-            <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 14, marginBottom: 16 }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid #1a1a1a' }}>
-                <h2 style={{ fontSize: 14, fontWeight: 600, color: '#d8d8d6', margin: 0 }}>Recente verzendingen</h2>
-              </div>
+            <Kaart titel="Recente verzendingen" style={{ marginBottom: 16 }}>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead>
-                    <tr>
-                      {['Datum', 'Naam', 'Onderwerp', 'Status'].map(kol => (
-                        <th key={kol} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: '#333', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid #1a1a1a', whiteSpace: 'nowrap' }}>
-                          {kol}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
+                  <Kop kolommen={['Datum', 'Naam', 'Onderwerp', 'Status']} />
                   <tbody>
                     {logRegels.slice(0, 50).map(log => (
-                      <tr key={log.id}>
-                        <td style={{ padding: '10px 16px', borderBottom: '1px solid #141414', color: '#333', fontSize: 12, whiteSpace: 'nowrap' }}>
-                          {formatDatum(log.created_at)}
+                      <tr key={log.id} className="tabel-rij">
+                        <td style={{ ...cel, padding: '10px 16px', color: c.tekstFlets, fontSize: 12, whiteSpace: 'nowrap' }}>
+                          {formatDatum(log.verstuurd_op)}
                         </td>
-                        <td style={{ padding: '10px 16px', borderBottom: '1px solid #141414', color: '#888', whiteSpace: 'nowrap' }}>
+                        <td style={{ ...cel, padding: '10px 16px', color: c.tekst, whiteSpace: 'nowrap' }}>
                           {log.subscribers?.naam ?? '(verwijderd)'}
                         </td>
-                        <td style={{ padding: '10px 16px', borderBottom: '1px solid #141414', color: '#555', maxWidth: 400 }}>
-                          {log.onderwerp}
-                        </td>
-                        <td style={{ padding: '10px 16px', borderBottom: '1px solid #141414' }}>
-                          <span style={{
-                            display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-                            background: 'rgba(74,222,128,.08)', border: '1px solid rgba(74,222,128,.2)', color: '#4ade80',
-                          }}>
-                            {log.status}
-                          </span>
+                        <td style={{ ...cel, padding: '10px 16px', maxWidth: 460 }}>{log.onderwerp}</td>
+                        <td style={{ ...cel, padding: '10px 16px' }}>
+                          <Badge kleur={c.accent} achtergrond={c.accentZacht} rand={c.accentRand}>{log.status}</Badge>
                         </td>
                       </tr>
                     ))}
+                    {!statsLaden && logRegels.length === 0 && (
+                      <Leeg kolommen={4}>Nog geen verzendingen gelogd.</Leeg>
+                    )}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Kaart>
 
-            {/* Disclaimer */}
-            <p style={{ fontSize: 11, color: '#2a2a2a', lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: 11, color: c.tekstFlets, lineHeight: 1.7, margin: 0, maxWidth: 720 }}>
               * Schatting op basis van Claude Sonnet 4.6 (~4.000 input + ~2.000 output tokens per nieuwsbrief = ≈ €0,04/mail).
               Werkelijke kosten kunnen afwijken. Raadpleeg de Anthropic- en Resend-dashboards voor exacte cijfers.
             </p>
+          </>
+        )}
+
+        {/* ── AGENTS TAB ── */}
+        {tabblad === 'agents' && (
+          <>
+            {agentsLaden && <p style={{ color: c.tekstZacht, fontSize: 13 }}>Laden…</p>}
+            {agentsFout && (
+              <Foutbalk titel="Agent-gegevens onvolledig">
+                {agentsFout}
+                <div style={{ marginTop: 8, color: c.tekstFlets }}>
+                  Zolang dit speelt blijven de onderstaande overzichten leeg, ook als de pipeline wél draait.
+                </div>
+              </Foutbalk>
+            )}
+            {agentsData && (() => {
+              const runs = agentsData.recenteRuns
+              const alleAgenten = ['scout', 'classificatie', 'redactie', 'kwaliteitscontrole', 'personalisatie', 'watchdog', 'herziening', 'groeirapport', 'onboarding']
+              const statusKleur = (s: string) => s === 'gelukt' ? c.accent : s === 'geëscaleerd' ? c.waarschuwing : c.fout
+              const statusBg = (s: string) => s === 'gelukt' ? c.accentZacht : s === 'geëscaleerd' ? 'rgba(250,204,21,.1)' : 'rgba(248,113,113,.1)'
+              const statusBorder = (s: string) => s === 'gelukt' ? c.accentRand : s === 'geëscaleerd' ? 'rgba(250,204,21,.24)' : 'rgba(248,113,113,.24)'
+
+              // Groepeer concepten per batch_token (neem eerste per token)
+              const batchMap = new Map<string, ConceptRegel[]>()
+              for (const cr of agentsData.concepten) {
+                if (!batchMap.has(cr.batch_token)) batchMap.set(cr.batch_token, [])
+                batchMap.get(cr.batch_token)!.push(cr)
+              }
+              const batches = Array.from(batchMap.entries()).slice(0, 3)
+
+              const issues = runs.filter(r => r.status !== 'gelukt')
+              const aantalRectificaties = agentsData.rectificaties.length
+              const pendingConcepten = agentsData.concepten.filter(cr => cr.status === 'in_afwachting')
+
+              const gelukt = runs.filter(r => r.status === 'gelukt').length
+              const gezondheid = runs.length ? Math.round((gelukt / runs.length) * 100) : null
+
+              return (
+                <>
+                  {/* Overzicht in één oogopslag */}
+                  <div className="stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 20 }}>
+                    <StatKaart waarde={runs.length} label="Runs (7 dagen)" />
+                    <StatKaart waarde={gezondheid === null ? '—' : `${gezondheid}%`} label="Geslaagd" />
+                    <StatKaart waarde={pendingConcepten.length} label="Wacht op goedkeuring" />
+                    <StatKaart waarde={issues.length} label="Aandachtspunten" />
+                  </div>
+
+                  {/* Aandacht-nodig sectie */}
+                  {(issues.length > 0 || aantalRectificaties > 0 || pendingConcepten.length > 0) && (
+                    <div style={{ background: 'rgba(248,113,113,.05)', border: '1px solid rgba(248,113,113,.18)', borderRadius: 12, padding: '18px 22px', marginBottom: 16 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: c.fout, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>Aandacht nodig</div>
+                      {pendingConcepten.length > 0 && (
+                        <div style={{ fontSize: 13, color: c.waarschuwing, marginBottom: 8, lineHeight: 1.6 }}>
+                          ⏳ <strong>{pendingConcepten.length} concept{pendingConcepten.length !== 1 ? 'en' : ''}</strong> wacht{pendingConcepten.length === 1 ? '' : 'en'} op goedkeuring — check je mail voor de goedkeurlink.
+                        </div>
+                      )}
+                      {aantalRectificaties > 0 && (
+                        <div style={{ fontSize: 13, color: c.fout, marginBottom: 8, lineHeight: 1.6 }}>
+                          ⚠ <strong>{aantalRectificaties} item{aantalRectificaties !== 1 ? 's' : ''}</strong> mogelijk verouderd — de herzieningsagent heeft een bronwijziging gedetecteerd.
+                        </div>
+                      )}
+                      {issues.slice(0, 5).map(r => (
+                        <div key={r.id} style={{ fontSize: 12, color: c.tekstZacht, marginTop: 6, lineHeight: 1.6 }}>
+                          <code style={{ color: c.fout, background: 'rgba(248,113,113,.12)', padding: '1px 5px', borderRadius: 3 }}>{r.agent}</code>
+                          {' — '}{r.status}{r.reden ? ` — ${r.reden}` : ''}{' '}
+                          <span style={{ color: c.tekstFlets }}>({formatDatum(r.aangemaakt_op)})</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Rectificaties */}
+                  {aantalRectificaties > 0 && (
+                    <Kaart titel="Bronwijzigingen — rectificatie nodig" style={{ marginBottom: 16 }}>
+                      {agentsData.rectificaties.map(r => (
+                        <div key={r.id} style={{ padding: '14px 20px', borderBottom: `1px solid ${c.borderSoft}` }}>
+                          <div style={{ fontSize: 13, color: c.tekst, fontWeight: 600, marginBottom: 4 }}>{r.titel}</div>
+                          <div style={{ fontSize: 12, color: c.tekstZacht, marginBottom: 6, lineHeight: 1.6 }}>{r.bron_naam} — {r.rectificatie_notitie}</div>
+                          <a className="bron" href={r.bron_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: c.accent, textDecoration: 'none' }}>Bekijk bron →</a>
+                        </div>
+                      ))}
+                    </Kaart>
+                  )}
+
+                  {/* Concepten (laatste batches) */}
+                  {batches.length > 0 && (
+                    <Kaart titel="Concepten" style={{ marginBottom: 16 }}>
+                      {batches.map(([token, rijen]) => {
+                        const eerste = rijen[0]
+                        const statusLabel = eerste.status === 'goedgekeurd' ? 'Goedgekeurd' : eerste.status === 'verzonden' ? 'Verstuurd' : 'Wacht op goedkeuring'
+                        const sKleur = eerste.status === 'verzonden' ? c.accent : eerste.status === 'goedgekeurd' ? c.waarschuwing : c.tekstZacht
+                        return (
+                          <div key={token} style={{ padding: '14px 20px', borderBottom: `1px solid ${c.borderSoft}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                              <span style={{ fontSize: 11, color: c.tekstFlets }}>{formatDatum(eerste.aangemaakt_op)}</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: sKleur, textTransform: 'uppercase', letterSpacing: '.06em' }}>{statusLabel}</span>
+                            </div>
+                            {rijen.map(r => (
+                              <div key={r.email} style={{ fontSize: 12, color: c.tekstZacht, marginBottom: 4, lineHeight: 1.5 }}>
+                                <span style={{ color: c.tekst, fontWeight: 600 }}>{r.naam}</span> — {r.onderwerp}
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })}
+                    </Kaart>
+                  )}
+
+                  {/* Pipeline gezondheid per agent */}
+                  <Kaart titel="Pipeline — afgelopen 7 dagen" style={{ marginBottom: 16 }}>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                        <Kop kolommen={['Agent', 'Laatste run', 'Status', 'Runs', 'Fouten']} />
+                        <tbody>
+                          {alleAgenten.map(agent => {
+                            const agentRuns = runs.filter(r => r.agent === agent)
+                            const laatste = agentRuns[0]
+                            const aantalFouten = agentRuns.filter(r => r.status === 'mislukt').length
+                            return (
+                              <tr key={agent} className="tabel-rij">
+                                <td style={{ ...cel, padding: '10px 16px', color: c.tekst, fontWeight: 600 }}>
+                                  <code style={{ fontSize: 12 }}>{agent}</code>
+                                </td>
+                                <td style={{ ...cel, padding: '10px 16px', color: c.tekstFlets, fontSize: 12 }}>
+                                  {laatste ? formatDatum(laatste.aangemaakt_op) : '—'}
+                                </td>
+                                <td style={{ ...cel, padding: '10px 16px' }}>
+                                  {laatste ? (
+                                    <Badge kleur={statusKleur(laatste.status)} achtergrond={statusBg(laatste.status)} rand={statusBorder(laatste.status)}>
+                                      {laatste.status}
+                                    </Badge>
+                                  ) : <span style={{ color: c.tekstFlets, fontSize: 12 }}>nog niet gedraaid</span>}
+                                </td>
+                                <td style={{ ...cel, padding: '10px 16px', color: agentRuns.length > 0 ? c.tekstZacht : c.tekstFlets }}>
+                                  {agentRuns.length || '—'}
+                                </td>
+                                <td style={{ ...cel, padding: '10px 16px', color: aantalFouten > 0 ? c.fout : c.tekstFlets }}>
+                                  {aantalFouten > 0 ? aantalFouten : '—'}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Kaart>
+
+                  {/* Recente runs */}
+                  <Kaart titel="Recente runs">
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                        <Kop kolommen={['Tijd', 'Agent', 'Ref', 'Status', 'Duur', 'Output/reden']} />
+                        <tbody>
+                          {runs.slice(0, 40).map(r => (
+                            <tr key={r.id} className="tabel-rij">
+                              <td style={{ ...cel, padding: '9px 16px', color: c.tekstFlets, whiteSpace: 'nowrap', fontSize: 11 }}>
+                                {new Date(r.aangemaakt_op).toLocaleString('nl-NL', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td style={{ ...cel, padding: '9px 16px' }}>
+                                <code style={{ color: c.tekst, fontSize: 11 }}>{r.agent}</code>
+                              </td>
+                              <td style={{ ...cel, padding: '9px 16px', color: c.tekstFlets, fontSize: 11, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {r.input_ref}
+                              </td>
+                              <td style={{ ...cel, padding: '9px 16px' }}>
+                                <Badge kleur={statusKleur(r.status)} achtergrond={statusBg(r.status)} rand={statusBorder(r.status)}>{r.status}</Badge>
+                              </td>
+                              <td style={{ ...cel, padding: '9px 16px', color: c.tekstFlets, fontSize: 11, whiteSpace: 'nowrap' }}>
+                                {r.duration_ms != null ? `${(r.duration_ms / 1000).toFixed(1)}s` : '—'}
+                              </td>
+                              <td style={{ ...cel, padding: '9px 16px', color: r.reden ? c.fout : c.tekstFlets, fontSize: 11, maxWidth: 280 }}>
+                                {r.reden ?? (r.output ? JSON.stringify(r.output).slice(0, 80) : '—')}
+                              </td>
+                            </tr>
+                          ))}
+                          {runs.length === 0 && !agentsLaden && (
+                            <Leeg kolommen={6}>Nog geen agent-runs — is de pipeline al live?</Leeg>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Kaart>
+                </>
+              )
+            })()}
+          </>
+        )}
+
+        {/* ── ARCHITECTUUR TAB ── */}
+        {tabblad === 'architectuur' && (
+          <>
+            <p style={{ fontSize: 12, color: c.tekstZacht, lineHeight: 1.7, margin: '0 0 20px', maxWidth: 640 }}>
+              Elk punt is een agent uit <code style={{ background: c.surfaceAlt, padding: '1px 6px', borderRadius: 4, color: c.tekst }}>lib/agents/</code>.
+              Klik op een node voor details. Grijze, stippellijn-verbonden nodes zijn nog niet gebouwd.
+            </p>
+            <ArchitectuurMap />
           </>
         )}
 

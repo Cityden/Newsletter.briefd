@@ -18,15 +18,16 @@ export async function GET() {
   const [{ data: logs, error: logsError }, { data: subs }] = await Promise.all([
     supabase
       .from('nieuwsbrief_log')
-      .select('id, subscriber_id, onderwerp, status, created_at')
-      .order('created_at', { ascending: false }),
+      .select('id, subscriber_id, onderwerp, status, verstuurd_op')
+      .order('verstuurd_op', { ascending: false }),
     supabase
       .from('subscribers')
       .select('id, naam, email, vakgebied, frequentie'),
   ])
 
   if (logsError) {
-    return NextResponse.json({ error: 'Database fout' }, { status: 500 })
+    console.error('[admin/stats] nieuwsbrief_log ophalen mislukt:', logsError.message)
+    return NextResponse.json({ error: `Database fout: ${logsError.message}` }, { status: 500 })
   }
 
   const subMap = Object.fromEntries((subs ?? []).map(s => [s.id, s]))
