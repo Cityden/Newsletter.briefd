@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
 // GET /api/subscribers/[token] — profiel ophalen
-export async function GET(_req: NextRequest, { params }: { params: { token: string } }) {
-  const { token } = params
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params
 
   const { data, error } = await supabase
     .from('subscribers')
@@ -22,8 +22,8 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
 }
 
 // PATCH /api/subscribers/[token] — voorkeuren bijwerken
-export async function PATCH(req: NextRequest, { params }: { params: { token: string } }) {
-  const { token } = params
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params
   const body = await req.json()
 
   const toegestaan = ['vakgebied', 'organisatie', 'frequentie', 'actief', 'voorkeuren']
@@ -43,6 +43,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { token: str
 
   if ('frequentie' in update && !['wekelijks', 'maandelijks'].includes(update.frequentie as string)) {
     return NextResponse.json({ error: 'Ongeldige frequentie' }, { status: 400 })
+  }
+
+  // Opzegdatum bijhouden voor het maandelijkse groeirapport (opzeggingen deze maand).
+  // Bij heraanmelden (actief: true) wordt de opzegdatum weer gewist.
+  if ('actief' in update) {
+    update.opgezegd_op = update.actief === false ? new Date().toISOString() : null
   }
 
   const { error } = await supabase

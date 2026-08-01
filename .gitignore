@@ -28,3 +28,9 @@ next-env.d.ts
 
 # Tijdelijke mappen
 mnt/
+
+# Graphify-output (gegenereerd, hoort niet in de repo)
+graphify-out/
+
+# Schermopnames
+*.mov
