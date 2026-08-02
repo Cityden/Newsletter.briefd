@@ -17,6 +17,20 @@ export type AgentNaam =
 
 export type AgentStatus = 'gelukt' | 'mislukt' | 'geëscaleerd'
 
+// Onderscheidt "de agent is stukgelopen" van "er was niets te melden".
+//
+// Die twee gaven allebei null terug, waardoor een ongeldige API-sleutel, een
+// afgekapt antwoord en een rustige nieuwsweek in het dashboard alle drie
+// verschenen als "Geen updates". Vier keer op één dag is daardoor een echt
+// defect als normaal gedrag gelezen. Een agent die faalt gooit nu deze fout;
+// null betekent voortaan uitsluitend: niets relevants gevonden.
+export class AgentFout extends Error {
+  constructor(public agent: AgentNaam, reden: string) {
+    super(reden)
+    this.name = 'AgentFout'
+  }
+}
+
 interface LogInput {
   agent: AgentNaam
   inputRef: string // subscriber-id, artikel-url, of andere traceerbare referentie

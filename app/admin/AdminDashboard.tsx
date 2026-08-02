@@ -61,7 +61,10 @@ interface LogRegel {
   } | null
 }
 
-type SendStatus = 'idle' | 'laden' | 'succes' | 'geen-updates' | 'fout'
+// 'leeg' en 'fout' waren hiervoor één toestand ('geen-updates'), waardoor een
+// ongeldige API-sleutel er in het dashboard uitzag als een rustige nieuwsweek.
+// 'aandacht' zit ertussenin: de pipeline werkte, maar leverde niets bruikbaars op.
+type SendStatus = 'idle' | 'laden' | 'succes' | 'leeg' | 'aandacht' | 'fout'
 // Architectuur is bewust geen tabblad meer maar een eigen pagina: de kaart
 // heeft het volledige scherm nodig om leesbaar te blijven.
 type Tabblad = 'subscribers' | 'statistieken' | 'agents'
@@ -211,6 +214,23 @@ function Foutbalk({ titel, children }: { titel: string; children: React.ReactNod
   )
 }
 
+// Kleur volgt de betekenis: groen = verstuurd, grijs = er was niets (en dat is
+// prima), geel = de moeite waard om naar te kijken, rood = er is iets stuk.
+function knopKleuren(status: SendStatus): React.CSSProperties {
+  switch (status) {
+    case 'succes':
+      return { background: c.accentZacht, color: c.accent, border: `1px solid ${c.accentRand}` }
+    case 'leeg':
+      return { background: c.surfaceAlt, color: c.tekstZacht, border: `1px solid ${c.border}` }
+    case 'aandacht':
+      return { background: 'rgba(250,204,21,.1)', color: c.waarschuwing, border: '1px solid rgba(250,204,21,.28)' }
+    case 'fout':
+      return { background: 'rgba(248,113,113,.12)', color: c.fout, border: '1px solid rgba(248,113,113,.3)' }
+    default:
+      return { background: c.accent, color: c.bg, border: '1px solid transparent' }
+  }
+}
+
 const cel: React.CSSProperties = {
   padding: '12px 16px', borderBottom: `1px solid ${c.borderSoft}`, color: c.tekstZacht, verticalAlign: 'middle',
 }
@@ -297,12 +317,15 @@ export default function AdminDashboard() {
       }, 1000)
       // Reset log zodat die bij terugkeer opnieuw wordt geladen
       setLogRegels([])
-    } else if (res.ok && !body.ok) {
-      setSendStatus(s => ({ ...s, [email]: 'geen-updates' }))
-      setSendDetail(s => ({ ...s, [email]: body.reden }))
     } else {
-      setSendStatus(s => ({ ...s, [email]: 'fout' }))
-      setSendDetail(s => ({ ...s, [email]: body.error ?? 'Onbekende fout' }))
+      // De route geeft `soort` mee; die is leidend, ook bij een 500 (een gestopte
+      // agent). Alleen als hij ontbreekt terugvallen op de HTTP-status.
+      const soort: SendStatus = body.soort === 'leeg' ? 'leeg'
+        : body.soort === 'aandacht' ? 'aandacht'
+        : body.soort === 'fout' ? 'fout'
+        : res.ok ? 'aandacht' : 'fout'
+      setSendStatus(s => ({ ...s, [email]: soort }))
+      setSendDetail(s => ({ ...s, [email]: body.reden ?? body.error ?? 'Onbekende fout' }))
     }
   }
 
@@ -622,22 +645,21 @@ export default function AdminDashboard() {
                                     style={{
                                       fontSize: 11.5, fontWeight: 700, padding: '7px 12px', borderRadius: 7, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', flexShrink: 0,
                                       opacity: status === 'laden' ? 0.5 : 1,
-                                      background: status === 'succes' ? c.accentZacht : status === 'fout' ? 'rgba(248,113,113,.1)' : status === 'geen-updates' ? c.surfaceAlt : c.accent,
-                                      color: status === 'succes' ? c.accent : status === 'fout' ? c.fout : status === 'geen-updates' ? c.tekstZacht : c.bg,
-                                      border: `1px solid ${status === 'succes' ? c.accentRand : status === 'fout' ? 'rgba(248,113,113,.25)' : status === 'geen-updates' ? c.border : 'transparent'}`,
+                                      ...knopKleuren(status),
                                     }}
                                     onClick={() => verstuurNieuwsbrief(sub.email)}
                                     disabled={status === 'laden'}
                                   >
                                     {status === 'laden' ? 'Bezig…'
                                       : status === 'succes' ? '✓ Verstuurd'
-                                      : status === 'geen-updates' ? '— Geen updates'
-                                      : status === 'fout' ? '✗ Fout'
+                                      : status === 'leeg' ? '— Niets te melden'
+                                      : status === 'aandacht' ? '⚠ Niets verstuurd'
+                                      : status === 'fout' ? '✗ Pipeline-fout'
                                       : 'Verstuur'}
                                   </button>
                                 </div>
                                 {sendDetail[sub.email] && (
-                                  <div style={{ fontSize: 11, color: status === 'fout' ? c.fout : c.tekstFlets, marginTop: 6, maxWidth: 230, lineHeight: 1.5 }}>
+                                  <div style={{ fontSize: 11, color: status === 'fout' ? c.fout : status === 'aandacht' ? c.waarschuwing : c.tekstZacht, marginTop: 6, maxWidth: 230, lineHeight: 1.5 }}>
                                     {sendDetail[sub.email]}
                                   </div>
                                 )}

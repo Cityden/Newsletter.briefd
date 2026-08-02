@@ -10,6 +10,7 @@ import { classificatieAgent } from '@/lib/agents/classificatie'
 import { redactieAgent } from '@/lib/agents/redactie'
 import { kwaliteitscontroleAgent } from '@/lib/agents/kwaliteitscontrole'
 import { personalisatieEnVerzendAgent } from '@/lib/agents/personalisatie'
+import { AgentFout } from '@/lib/agents/logging'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
@@ -75,23 +76,46 @@ export async function POST(req: NextRequest) {
     voorkeuren: abonnee.voorkeuren ?? undefined,
   }
 
-  // Volledige agent-pipeline (zelfde als de maandag-cron)
-  const artikelen = await scoutAgent(bronnen, 30, abonnee.id)
-  if (artikelen.length === 0) {
-    return NextResponse.json({ ok: false, reden: 'Geen recente artikelen gevonden in de bronnen' })
+  // Volledige agent-pipeline (zelfde als de maandag-cron).
+  //
+  // `soort` onderscheidt drie uitkomsten die hiervoor allemaal als "Geen updates"
+  // in het dashboard belandden:
+  //   leeg     — er was echt niets te melden (rustige nieuwsweek)
+  //   aandacht — de pipeline werkte, maar het resultaat sneuvelde bij de controle
+  //   fout     — een agent is stukgelopen; dit is een defect, geen nieuwsstilte
+  let artikelen, geclassificeerd, redactieResultaat, qc
+  try {
+    artikelen = await scoutAgent(bronnen, 30, abonnee.id)
+    if (artikelen.length === 0) {
+      return NextResponse.json({
+        ok: false, soort: 'aandacht',
+        reden: `Geen recente artikelen uit ${bronnen.length} bron(nen) — controleer de Agents-tab op uitgevallen feeds`,
+      })
+    }
+
+    const vakgebiedContext = uitlegVakgebied(abonnee.vakgebied)
+    geclassificeerd = await classificatieAgent(artikelen, vakgebiedContext, abonnee.id)
+    redactieResultaat = await redactieAgent(geclassificeerd, profiel, abonnee.id)
+    if (!redactieResultaat) {
+      return NextResponse.json({
+        ok: false, soort: 'leeg',
+        reden: `Niets relevants gevonden: geen van de ${artikelen.length} artikelen haalde de relevantiedrempel`,
+      })
+    }
+
+    qc = await kwaliteitscontroleAgent(redactieResultaat, geclassificeerd, abonnee.id)
+  } catch (err) {
+    const fout = err instanceof AgentFout
+    return NextResponse.json({
+      ok: false, soort: 'fout',
+      reden: fout ? `Agent "${(err as AgentFout).agent}" is gestopt: ${err.message}`
+                  : `Pipeline afgebroken: ${err instanceof Error ? err.message : String(err)}`,
+    }, { status: 500 })
   }
 
-  const vakgebiedContext = uitlegVakgebied(abonnee.vakgebied)
-  const geclassificeerd = await classificatieAgent(artikelen, vakgebiedContext, abonnee.id)
-  const redactieResultaat = await redactieAgent(geclassificeerd, profiel, abonnee.id)
-  if (!redactieResultaat) {
-    return NextResponse.json({ ok: false, reden: 'Geen relevante updates gevonden na classificatie' })
-  }
-
-  const qc = await kwaliteitscontroleAgent(redactieResultaat, geclassificeerd, abonnee.id)
   if (qc.goedgekeurd.length === 0) {
     return NextResponse.json({
-      ok: false,
+      ok: false, soort: 'aandacht',
       reden: `Kwaliteitscontrole keurde alle ${qc.afgekeurd.length} item(s) af`,
       afgekeurd: qc.afgekeurd.map(a => ({ titel: a.item.titel, reden: a.reden })),
     })

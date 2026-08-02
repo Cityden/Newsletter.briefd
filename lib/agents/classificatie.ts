@@ -14,6 +14,12 @@ export interface GeclassificeerdArtikel extends Artikel {
 
 const MODEL = 'claude-haiku-4-5-20251001' // klein/snel model — classificatie hoeft niet met het zware model
 
+// Vanaf welke score een artikel de redactie in gaat. Hoort hier thuis en niet in
+// redactie.ts, omdat de fail-open fallback hieronder dezelfde waarde moet gebruiken.
+// Op 4 kwam vrijwel alles door: met brede bronnen als EUR-Lex leverde dat
+// nieuwsbrieven vol sanctie- en landbouwwetgeving op. 6 = "duidelijk relevant".
+export const RELEVANTIE_DREMPEL = 6
+
 export async function classificatieAgent(
   artikelen: Artikel[],
   vakgebiedContext: string,
@@ -100,8 +106,11 @@ lange met ruis.`,
       reden: err instanceof Error ? err.message : String(err),
       durationMs: stop(),
     })
-    // Fail-open: bij een classificatiefout krijgt elk item een neutrale score,
+    // Fail-open: bij een classificatiefout krijgt elk item precies de drempel,
     // zodat de redactie-agent alsnog kan beoordelen i.p.v. dat de hele run stopt.
-    return artikelen.map(a => ({ ...a, relevantiescore: 5, reden: 'classificatie mislukt — fallback' }))
+    // Deze score MOET gelijk lopen met RELEVANTIE_DREMPEL — hij stond hier vast op
+    // 5 terwijl de drempel naar 6 ging, waardoor een classificatiefout gegarandeerd
+    // in "geen relevante updates" eindigde in plaats van in een leesbare fout.
+    return artikelen.map(a => ({ ...a, relevantiescore: RELEVANTIE_DREMPEL, reden: 'classificatie mislukt — fallback' }))
   }
 }

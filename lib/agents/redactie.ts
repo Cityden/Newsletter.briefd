@@ -1,6 +1,6 @@
-import type { GeclassificeerdArtikel } from './classificatie'
+import { RELEVANTIE_DREMPEL, type GeclassificeerdArtikel } from './classificatie'
 import { bepaalTaal, uitlegVakgebied, saniteerVoorPrompt, type Profiel } from '@/lib/generator'
-import { logAgentRun, timer } from './logging'
+import { AgentFout, logAgentRun, timer } from './logging'
 
 // Redactie-agent (automatiseringsplan domein 1, agent 3).
 // T.o.v. de oude genereerNieuwsbrief(): deze agent selecteert niet meer zelf —
@@ -8,9 +8,6 @@ import { logAgentRun, timer } from './logging'
 // nog, en krijgt de expliciete instructie om nooit verder te gaan dan de brontekst
 // (zie automatiseringsplan sectie 2b, punt 1 en 2: "brontekst nooit loslaten").
 
-// Op 4 kwam vrijwel alles door: met brede bronnen als EUR-Lex leverde dat
-// nieuwsbrieven vol sanctie- en landbouwwetgeving op. 6 = "duidelijk relevant".
-const RELEVANTIE_DREMPEL = 6
 
 export interface RedactieItem {
   titel: string
@@ -119,7 +116,7 @@ ${artikelTekst}`,
         reden: 'model retourneerde geen items',
         durationMs: stop(),
       })
-      return null
+      throw new AgentFout('redactie', 'model retourneerde geen items')
     }
 
     await logAgentRun({
@@ -131,13 +128,16 @@ ${artikelTekst}`,
     })
     return parsed
   } catch (err) {
+    if (err instanceof AgentFout) throw err // al gelogd hierboven
+    const reden = err instanceof Error ? err.message : String(err)
     await logAgentRun({
       agent: 'redactie',
       inputRef: subscriberId,
       status: 'mislukt',
-      reden: err instanceof Error ? err.message : String(err),
+      reden,
       durationMs: stop(),
     })
-    return null
+    // Geen null: dat betekent "niets relevants gevonden", en dit is een defect.
+    throw new AgentFout('redactie', reden)
   }
 }
