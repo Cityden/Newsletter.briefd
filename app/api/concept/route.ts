@@ -8,12 +8,13 @@ import { randomUUID } from 'crypto'
 import { Resend } from 'resend'
 import { supabase } from '@/lib/supabase'
 import { getBronnen } from '@/lib/sources'
-import { uitlegVakgebied } from '@/lib/generator'
+import { uitlegVakgebied, bepaalTaal } from '@/lib/generator'
 import { scoutAgent } from '@/lib/agents/scout'
 import { classificatieAgent } from '@/lib/agents/classificatie'
 import { redactieAgent } from '@/lib/agents/redactie'
 import { kwaliteitscontroleAgent } from '@/lib/agents/kwaliteitscontrole'
 import { personalisatieEnVerzendAgent } from '@/lib/agents/personalisatie'
+import type { ConceptItemPreview } from '@/lib/agents/herziening'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
@@ -110,11 +111,23 @@ export async function GET(req: NextRequest) {
 
       if (!result.html) { overgeslagen.push(abonnee.email); continue }
 
-      const itemsPreview = qc.goedgekeurd.slice(0, 5).map(item => ({
-        titel: item.titel,
-        impact: item.impact,
-        bronNaam: item.bronNaam,
-      }))
+      // Bewaart genoeg per item om er maandag, ná verzending, een
+      // gepubliceerde_items-rij van te maken (zie registreerUitConceptPreview) —
+      // op dat moment is qc.goedgekeurd allang uit het geheugen.
+      const taal = abonnee.voorkeuren?.taal || bepaalTaal(abonnee.land ?? 'NL')
+      const itemsPreview: ConceptItemPreview[] = qc.goedgekeurd.slice(0, 5).map(item => {
+        const bron = geclassificeerd.find(a => a.url === item.bronUrl)
+        return {
+          titel: item.titel,
+          impact: item.impact,
+          type: item.type,
+          bronNaam: item.bronNaam,
+          bronUrl: item.bronUrl,
+          samenvatting: item.samenvatting,
+          bronSnapshot: bron?.samenvatting ?? item.samenvatting,
+          taal,
+        }
+      })
 
       await supabase.from('concept_nieuwsbrieven').insert({
         batch_token: batchToken,

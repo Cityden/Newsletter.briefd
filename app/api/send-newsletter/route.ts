@@ -10,13 +10,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { supabase } from '@/lib/supabase'
 import { getBronnen } from '@/lib/sources'
-import { uitlegVakgebied } from '@/lib/generator'
+import { uitlegVakgebied, bepaalTaal } from '@/lib/generator'
 import { scoutAgent } from '@/lib/agents/scout'
 import { classificatieAgent } from '@/lib/agents/classificatie'
 import { redactieAgent } from '@/lib/agents/redactie'
 import { kwaliteitscontroleAgent } from '@/lib/agents/kwaliteitscontrole'
 import { personalisatieEnVerzendAgent } from '@/lib/agents/personalisatie'
-import { registreerGepubliceerdeItems } from '@/lib/agents/herziening'
+import { registreerGepubliceerdeItems, registreerUitConceptPreview, type ConceptItemPreview } from '@/lib/agents/herziening'
 import { stuurAlertMail } from '@/lib/agents/alert'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
@@ -115,6 +115,14 @@ async function stuurGoedgekeurdeConcepten(
         .update({ laatste_mail_op: new Date().toISOString() })
         .eq('id', concept.subscriber_id)
 
+      // Dit is het reguliere wekelijkse verzendpad (goedgekeurde vrijdag-concepten) —
+      // zonder dit registreerde alleen de fallback-pipeline ooit iets in
+      // gepubliceerde_items, waardoor die tabel in de praktijk altijd leeg bleef.
+      const preview = concept.items_preview as ConceptItemPreview[] | null
+      if (preview && preview.length > 0) {
+        await registreerUitConceptPreview(preview)
+      }
+
       verzonden.push(concept.email as string)
     } catch (err) {
       const reden = err instanceof Error ? err.message : String(err)
@@ -212,10 +220,11 @@ async function volledigePipeline(adminEmail: string, emailDomein: string, baseUr
       )
       if (!verzendResultaat.verzonden) throw new Error(verzendResultaat.reden ?? 'onbekende verzendfout')
 
+      const taal = abonnee.voorkeuren?.taal || bepaalTaal(abonnee.land ?? 'NL')
       await registreerGepubliceerdeItems(
         qc.goedgekeurd.map(item => {
           const bron = geclassificeerd.find(a => a.url === item.bronUrl)
-          return { item, bronSnapshot: bron?.samenvatting ?? item.samenvatting }
+          return { item, bronSnapshot: bron?.samenvatting ?? item.samenvatting, taal }
         })
       )
 

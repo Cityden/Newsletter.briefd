@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { teksten, type Locale } from '@/lib/locale'
+import { teksten, type Locale, type PreviewItem } from '@/lib/locale'
 
 const BRONNEN = ['Staatscourant', 'AFM', 'DNB', 'Rechtspraak.nl', 'Autoriteit Persoonsgegevens', 'NCSC', 'ACM', 'EUR-Lex', 'Belastingdienst', 'SZW', 'UWV', 'RVO', 'Europees Parlement']
 
@@ -9,10 +9,15 @@ const BRONNEN = ['Staatscourant', 'AFM', 'DNB', 'Rechtspraak.nl', 'Autoriteit Pe
 // via cookies()). Eerder werd hier client-side gestart met 'nl' en pas na mount
 // gecorrigeerd — de eerste HTML die de browser (en elke crawler) zag was daardoor
 // altijd Nederlands, ook op brieft.online.
-export default function HomeClient({ locale, weekNummer }: { locale: Locale; weekNummer: number }) {
+//
+// previewItems: echte, recent gepubliceerde items uit gepubliceerde_items,
+// opgehaald door de server component. undefined zolang er nog geen items in de
+// eigen taal beschikbaar zijn — dan valt de kaart terug op de vaste voorbeelden.
+export default function HomeClient({ locale, weekNummer, previewItems }: { locale: Locale; weekNummer: number; previewItems?: PreviewItem[] }) {
   const [current, setCurrent] = useState(0)
   const [visible, setVisible] = useState(false)
   const t = teksten[locale]
+  const items = previewItems && previewItems.length > 0 ? previewItems : t.previewItems
 
   useEffect(() => {
     setVisible(true)
@@ -105,10 +110,10 @@ export default function HomeClient({ locale, weekNummer }: { locale: Locale; wee
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', animation: 'pulse 2s ease-in-out infinite' }}></div>
             <span style={{ fontSize: 11, color: '#444', fontWeight: 500 }}>{t.previewLabel(weekNummer)}</span>
-            <span style={{ marginLeft: 'auto', background: 'rgba(74,222,128,.08)', border: '1px solid rgba(74,222,128,.12)', color: '#4ade80', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>{t.previewUpdates}</span>
+            <span style={{ marginLeft: 'auto', background: 'rgba(74,222,128,.08)', border: '1px solid rgba(74,222,128,.12)', color: '#4ade80', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>{t.previewUpdates(items.length)}</span>
           </div>
           <div style={{ borderTop: '1px solid #1a1a1a', margin: '0 0 14px' }}></div>
-          {t.previewItems.map((item, i) => (
+          {items.map((item, i) => (
             <div key={i} style={{ background: '#0e0e0e', border: '1px solid #1e1e1e', borderLeft: `2px solid ${i === 0 ? '#4ade80' : '#333'}`, borderRadius: 8, padding: '12px 14px', marginBottom: 8, opacity: i === 0 ? 1 : 0.5 }}>
               <div style={{ display: 'flex', gap: 5, marginBottom: 7 }}>
                 <span style={{ background: i === 0 ? 'rgba(248,113,113,.08)' : '#161616', border: `1px solid ${i === 0 ? 'rgba(248,113,113,.15)' : '#222'}`, color: i === 0 ? '#f87171' : '#888', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>{item.impact}</span>

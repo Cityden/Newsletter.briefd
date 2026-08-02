@@ -20,20 +20,32 @@ const HERCONTROLE_NA_DAGEN = 14 // elk item hooguit eens per 14 dagen opnieuw
 const MAX_PER_RUN = 25 // begrensd per cron-run — voorkomt een lange/dure job bij veel opgebouwde items
 
 export interface GepubliceerdItemInput {
-  item: RedactieItem
+  // Alleen de velden die daadwerkelijk worden opgeslagen — een subset van
+  // RedactieItem, zodat een aanroeper vanuit een opgeslagen concept-preview
+  // (die geen 'actie' of 'datum' bewaart) dit niet met nepwaarden hoeft aan
+  // te vullen.
+  item: Pick<RedactieItem, 'titel' | 'impact' | 'type' | 'samenvatting' | 'bronUrl' | 'bronNaam'>
   bronSnapshot: string
+  // Taal waarin dit specifieke item is geschreven (bepaalTaal-uitkomst voor de
+  // abonnee die de redactie triggerde). Nodig omdat gepubliceerde_items per
+  // bron_url dedupliceert over ALLE abonnees heen — zonder dit veld kan de
+  // homepage niet weten of een opgeslagen item in het Nederlands of Engels is.
+  taal: string
 }
 
 /** Aanroepen ná een succesvolle verzending — dedupliceert zelf op bron_url. */
 export async function registreerGepubliceerdeItems(inputs: GepubliceerdItemInput[]): Promise<void> {
   if (inputs.length === 0) return
 
-  const rows = inputs.map(({ item, bronSnapshot }) => ({
+  const rows = inputs.map(({ item, bronSnapshot, taal }) => ({
     bron_url: item.bronUrl,
     bron_naam: item.bronNaam,
     titel: item.titel,
     samenvatting: item.samenvatting,
     bron_snapshot: bronSnapshot,
+    impact: item.impact,
+    type: item.type,
+    taal,
   }))
 
   const { error } = await supabase
@@ -43,6 +55,31 @@ export async function registreerGepubliceerdeItems(inputs: GepubliceerdItemInput
   if (error) {
     console.error('[herziening] registreren van gepubliceerde items mislukt:', error.message)
   }
+}
+
+// Wat een goedgekeurd concept (concept_nieuwsbrieven.items_preview) bewaart per
+// item — genoeg om er later, ná verzending, een gepubliceerde_items-rij van te
+// maken. Los van RedactieItem omdat een concept geen 'actie' of 'datum' bewaart.
+export interface ConceptItemPreview {
+  titel: string
+  impact: RedactieItem['impact']
+  type: RedactieItem['type']
+  bronNaam: string
+  bronUrl: string
+  samenvatting: string
+  bronSnapshot: string
+  taal: string
+}
+
+/** Voor de maandagcron: registreert de items van een al verstuurd, goedgekeurd concept. */
+export async function registreerUitConceptPreview(preview: ConceptItemPreview[]): Promise<void> {
+  await registreerGepubliceerdeItems(
+    preview.map(p => ({
+      item: { titel: p.titel, impact: p.impact, type: p.type, samenvatting: p.samenvatting, bronUrl: p.bronUrl, bronNaam: p.bronNaam },
+      bronSnapshot: p.bronSnapshot,
+      taal: p.taal,
+    }))
+  )
 }
 
 export async function herzieningsAgent(): Promise<{ gecontroleerd: number; rectificaties: number }> {

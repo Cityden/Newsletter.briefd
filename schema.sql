@@ -171,3 +171,17 @@ alter table agent_runs drop constraint if exists agent_runs_agent_check;
 alter table agent_runs add constraint agent_runs_agent_check
   check (agent in ('scout', 'classificatie', 'redactie', 'kwaliteitscontrole', 'personalisatie',
                     'watchdog', 'bronwachter', 'herziening', 'groeirapport', 'onboarding'));
+
+-- ── Homepage-preview met echte, wekelijks verse content ─────────────────────
+-- De preview-kaart op de homepage toonde altijd twee vaste voorbeelditems.
+-- gepubliceerde_items had de brontekst al (titel, samenvatting, bron), maar
+-- miste impact/type (voor de badges) en taal (om te weten of een item op de
+-- Nederlandse of Engelse homepage past — elke abonnee krijgt zijn nieuwsbrief
+-- in zijn eigen taal, en deze tabel dedupliceert per bron_url over alle
+-- abonnees heen, dus zonder dit veld is niet te zien in welke taal een
+-- opgeslagen item staat).
+alter table gepubliceerde_items add column if not exists impact text
+  check (impact in ('hoog', 'gemiddeld', 'laag'));
+alter table gepubliceerde_items add column if not exists type text
+  check (type in ('wetgeving', 'uitspraak', 'beleid', 'tarief'));
+alter table gepubliceerde_items add column if not exists taal text;

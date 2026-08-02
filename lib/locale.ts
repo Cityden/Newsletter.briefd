@@ -26,7 +26,7 @@ export const teksten = {
 
     // Preview card
     previewLabel: (week: number) => `Brieft · jouw vakgebied · week ${week}`,
-    previewUpdates: '2 updates',
+    previewUpdates: (n: number) => `${n} update${n === 1 ? '' : 's'}`,
     previewItems: [
       { impact: 'Hoge impact', type: 'Wetgeving', title: 'Nieuwe meldplicht datalekken — strengere termijn', desc: 'Organisaties moeten datalekken voortaan binnen 48 uur melden bij de toezichthouder. Eerder gold 72 uur. Geldt voor alle sectoren.' },
       { impact: 'Gemiddeld', type: 'Uitspraak', title: 'Rechter: mondeling contract ook bindend bij opdrachten boven €10k', desc: 'Hoge Raad bevestigt dat schriftelijk contract niet altijd vereist is, ook bij hogere bedragen...' },
@@ -211,7 +211,7 @@ export const teksten = {
 
     // Preview card
     previewLabel: (week: number) => `Brieft · your field · week ${week}`,
-    previewUpdates: '2 updates',
+    previewUpdates: (n: number) => `${n} update${n === 1 ? '' : 's'}`,
     previewItems: [
       { impact: 'High impact', type: 'Legislation', title: 'New data breach notification rule — stricter deadline', desc: 'Organisations must now report data breaches within 48 hours to the regulator. Previously 72 hours applied. Covers all sectors.' },
       { impact: 'Medium', type: 'Court ruling', title: 'Court: verbal contract binding for engagements over €10k', desc: 'Supreme Court confirms written contract not always required, even for larger amounts...' },
@@ -372,3 +372,29 @@ export const teksten = {
 } as const
 
 export type Teksten = typeof teksten.nl
+
+// ── Preview-kaart met echte content ─────────────────────────────────────────
+// app/page.tsx haalt de meest recente gepubliceerde items op (zie
+// gepubliceerde_items.impact/type/taal in schema.sql) en zet de opgeslagen
+// codes hier om naar leesbare labels per taal. Vertaalt dezelfde waarden als
+// RedactieItem['impact'/'type'] in lib/agents/redactie.ts.
+export interface PreviewItem {
+  impact: string
+  type: string
+  title: string
+  desc: string
+}
+
+export const IMPACT_LABEL: Record<Locale, Record<string, string>> = {
+  nl: { hoog: 'Hoge impact', gemiddeld: 'Gemiddeld', laag: 'Laag' },
+  en: { hoog: 'High impact', gemiddeld: 'Medium', laag: 'Low' },
+}
+
+export const TYPE_LABEL: Record<Locale, Record<string, string>> = {
+  nl: { wetgeving: 'Wetgeving', uitspraak: 'Uitspraak', beleid: 'Beleid', tarief: 'Tarief' },
+  en: { wetgeving: 'Legislation', uitspraak: 'Court ruling', beleid: 'Policy', tarief: 'Rate' },
+}
+
+// Taal zoals bepaalTaal()/taalOpties hem opslaat op gepubliceerde_items.taal —
+// niet de i18n-locale zelf. Bepaalt welke opgeslagen items bij welke homepage horen.
+export const TAAL_PER_LOCALE: Record<Locale, string> = { nl: 'Nederlands', en: 'Engels' }

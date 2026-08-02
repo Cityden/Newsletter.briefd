@@ -106,7 +106,7 @@ interface ConceptRegel {
   email: string
   onderwerp: string
   aangemaakt_op: string
-  items_preview: { titel: string; impact: string; bronNaam: string }[] | null
+  items_preview: { titel: string; impact: string; bronNaam: string; type?: string; bronUrl?: string; samenvatting?: string; bronSnapshot?: string; taal?: string }[] | null
 }
 
 interface AgentsData {
