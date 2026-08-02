@@ -92,7 +92,11 @@ lange met ruis.`,
       inputRef: subscriberId,
       output: {
         aantal: resultaat.length,
-        relevantAantal: resultaat.filter(r => r.relevantiescore >= 4).length,
+        // Stond hier hard op 4 terwijl RELEVANTIE_DREMPEL naar 6 ging — beïnvloedt
+        // niet wat er wordt geschreven (dat filtert redactie.ts zelf), maar gaf wel
+        // een te hoog "relevant"-getal in de audit trail.
+        relevantAantal: resultaat.filter(r => r.relevantiescore >= RELEVANTIE_DREMPEL).length,
+        tokens: { in: data.usage?.input_tokens, uit: data.usage?.output_tokens },
       },
       status: 'gelukt',
       durationMs: stop(),

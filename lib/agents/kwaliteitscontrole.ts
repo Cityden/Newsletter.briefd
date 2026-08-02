@@ -28,6 +28,10 @@ export async function kwaliteitscontroleAgent(
   const stop = timer()
   const goedgekeurd: RedactieItem[] = []
   const afgekeurd: { item: RedactieItem; reden: string }[] = []
+  // Eén call per item (zie kanttekening hierboven) — dit is de daadwerkelijke
+  // kostenpost van de run, dus optellen i.p.v. schatten.
+  let tokensIn = 0
+  let tokensUit = 0
 
   // Exacte string-vergelijking keurde items af op puur cosmetische verschillen
   // (een gedecodeerde &, een afsluitende slash). Het doel is een verzonnen URL
@@ -73,6 +77,8 @@ Wees streng: bij twijfel is akkoord=false.`,
 
       const data = await response.json()
       if (data.error) throw new Error(JSON.stringify(data.error))
+      tokensIn += data.usage?.input_tokens ?? 0
+      tokensUit += data.usage?.output_tokens ?? 0
       if (data.stop_reason === 'max_tokens') {
         // Bij twijfel afkeuren, niet gokken: een afgekapt antwoord is geen goedkeuring.
         afgekeurd.push({ item, reden: 'controle-antwoord afgekapt op max_tokens' })
@@ -101,7 +107,7 @@ Wees streng: bij twijfel is akkoord=false.`,
   await logAgentRun({
     agent: 'kwaliteitscontrole',
     inputRef: subscriberId,
-    output: { goedgekeurd: goedgekeurd.length, afgekeurd: afgekeurd.length },
+    output: { goedgekeurd: goedgekeurd.length, afgekeurd: afgekeurd.length, tokens: { in: tokensIn, uit: tokensUit } },
     status: afgekeurd.length > 0 ? 'geëscaleerd' : 'gelukt',
     reden: afgekeurd.length > 0 ? afgekeurd.map(a => a.reden).join(' | ').slice(0, 500) : undefined,
     durationMs: stop(),

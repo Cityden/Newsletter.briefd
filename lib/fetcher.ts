@@ -60,6 +60,47 @@ function parseAtom(xml: string, bronnaam: string): Artikel[] {
   })).filter(a => a.titel && a.url)
 }
 
+// Sommige feeds leveren alleen een titel en geen description — EUR-Lex is het
+// duidelijkste voorbeeld. Zonder brontekst kan de kwaliteitscontrole niets
+// verifiëren, dus zulke items sneuvelen altijd. Deze functie haalt de tekst
+// alsnog op, zodat die bronnen wél bruikbaar worden.
+//
+// Alleen aanroepen voor artikelen die de relevantiedrempel al hebben gehaald:
+// het is een extra HTTP-verzoek per artikel.
+const MAX_BRONTEKST = 2000
+
+export async function haalBrontekstOp(url: string): Promise<string> {
+  // De portaalpagina van EUR-Lex is ~1,9 miljoen tekens navigatie plus het hele
+  // document. De TXT/HTML-variant geeft alleen de documenttekst zelf.
+  const celex = url.match(/CELEX[:%]3?A?([0-9A-Z()]+)/i)?.[1]
+  const doelUrl = celex
+    ? `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${celex}`
+    : url
+
+  try {
+    const res = await fetch(doelUrl, {
+      headers: { 'User-Agent': 'Brieft-Nieuwsbrief/1.0 (+https://brieft.online)' },
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!res.ok) return ''
+
+    const html = await res.text()
+    // Ruwe maar voorspelbare extractie: navigatie en scripts eruit, dan tags weg.
+    const tekst = html
+      .replace(/<(script|style|nav|header|footer|noscript)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&[a-z]+;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    return tekst.slice(0, MAX_BRONTEKST)
+  } catch {
+    return ''
+  }
+}
+
 async function fetchFeed(url: string, bronnaam: string): Promise<Artikel[]> {
   try {
     const res = await fetch(url, {
