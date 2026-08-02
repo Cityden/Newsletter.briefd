@@ -1,5 +1,7 @@
 import { RELEVANTIE_DREMPEL, type GeclassificeerdArtikel } from './classificatie'
 import { bepaalTaal, uitlegVakgebied, saniteerVoorPrompt, type Profiel } from '@/lib/generator'
+import { haalBrontekstOp } from '@/lib/fetcher'
+import { heeftBruikbareBrontekst } from './scout'
 import { AgentFout, logAgentRun, timer } from './logging'
 
 // Redactie-agent (automatiseringsplan domein 1, agent 3).
@@ -30,10 +32,38 @@ export async function redactieAgent(
   profiel: Profiel,
   subscriberId: string
 ): Promise<RedactieResultaat | null> {
-  const relevant = artikelen.filter(a => a.relevantiescore >= RELEVANTIE_DREMPEL)
-  if (relevant.length === 0) return null
+  const kandidaten = artikelen.filter(a => a.relevantiescore >= RELEVANTIE_DREMPEL)
+  if (kandidaten.length === 0) return null
 
   const stop = timer()
+
+  // Verrijking: feeds als EUR-Lex leveren alleen een titel. Zonder brontekst moet
+  // het model de details verzinnen en keurt de kwaliteitscontrole het item terecht
+  // af — in een testrun overleefden 3 van de 54 items. Hier halen we die tekst
+  // alsnog op, maar pas nu: alleen voor wat de relevantiedrempel haalde, dus een
+  // handvol verzoeken in plaats van tientallen.
+  const verrijkt = await Promise.all(kandidaten.map(async a => {
+    if (heeftBruikbareBrontekst(a)) return a
+    const tekst = await haalBrontekstOp(a.url)
+    return tekst ? { ...a, samenvatting: tekst } : a
+  }))
+
+  // Wat ook na verrijking geen brontekst heeft, gaat eruit: daar valt niets over
+  // te schrijven dat de controle overleeft.
+  const relevant = verrijkt.filter(heeftBruikbareBrontekst)
+  const aantalVerrijkt = verrijkt.filter((a, i) => a.samenvatting !== kandidaten[i].samenvatting).length
+  const zonderTekstWeg = verrijkt.length - relevant.length
+
+  if (relevant.length === 0) {
+    await logAgentRun({
+      agent: 'redactie',
+      inputRef: subscriberId,
+      status: 'geëscaleerd',
+      reden: `alle ${kandidaten.length} relevante items misten brontekst, ook na verrijking`,
+      durationMs: stop(),
+    })
+    return null
+  }
   const taal = profiel.voorkeuren?.taal || bepaalTaal(profiel.land)
   const vakgebiedContext = uitlegVakgebied(profiel.vakgebied)
 
@@ -122,7 +152,13 @@ ${artikelTekst}`,
     await logAgentRun({
       agent: 'redactie',
       inputRef: subscriberId,
-      output: { aantalItems: parsed.items.length },
+      output: {
+        aantalItems: parsed.items.length,
+        verrijkt: aantalVerrijkt,
+        zonderTekstWeg,
+        // Echte tokens uit de API-respons, zodat kosten gemeten worden i.p.v. geschat.
+        tokens: { in: data.usage?.input_tokens, uit: data.usage?.output_tokens },
+      },
       status: 'gelukt',
       durationMs: stop(),
     })

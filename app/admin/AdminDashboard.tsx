@@ -11,9 +11,19 @@ const BRANCHE_OPTIES = [
   'Agri, Food & Farma', 'Media & Communicatie', 'Anders',
 ]
 
-// Geschatte kosten per verstuurde nieuwsbrief (Claude Sonnet API + Resend)
-// Claude Sonnet 4.6: ~4000 input tokens × $3/MTok + ~2000 output tokens × $15/MTok ≈ $0.042 ≈ €0.039
-const KOSTEN_PER_MAIL_EUR = 0.04
+// Geschatte kosten per verstuurde nieuwsbrief (Claude API + Resend).
+//
+// Deze schatting ging alleen uit van de redactie-stap. Sinds augustus 2026
+// loggen classificatie, redactie en kwaliteitscontrole hun echte token-gebruik
+// naar agent_runs.output — dat is de bron van waarheid, dit getal is een
+// grove vlaggenstok totdat het dashboard die data zelf uitleest.
+//
+// Op een gemeten run (Finance/NL, 85 artikelen, 10 geschreven items):
+//   redactie (Sonnet 4.6, gemeten):        4.679 in / 3.145 uit  ≈ $0,061
+//   classificatie (Haiku 4.5, geschat):    ~1 call voor alle artikelen ≈ $0,01-0,02
+//   kwaliteitscontrole (Sonnet 4.6, geschat): 1 call per item, hier 10 ≈ $0,03-0,05
+// Totaal ≈ $0,10-0,13 — ruim boven de oude vlakke €0,04.
+const KOSTEN_PER_MAIL_EUR = 0.11
 
 // ── Designtokens ──────────────────────────────────────────────────────────
 // Eén bron van waarheid voor kleur en ruimte. De oude waarden (#333 tekst op
@@ -779,8 +789,10 @@ export default function AdminDashboard() {
             </Kaart>
 
             <p style={{ fontSize: 11, color: c.tekstFlets, lineHeight: 1.7, margin: 0, maxWidth: 720 }}>
-              * Schatting op basis van Claude Sonnet 4.6 (~4.000 input + ~2.000 output tokens per nieuwsbrief = ≈ €0,04/mail).
-              Werkelijke kosten kunnen afwijken. Raadpleeg de Anthropic- en Resend-dashboards voor exacte cijfers.
+              * Schatting op basis van één gemeten run (redactie: Sonnet 4.6, 4.679 in / 3.145 uit tokens) plus een
+              inschatting voor classificatie en kwaliteitscontrole, samen ≈ €0,10-0,13/mail. De agents loggen hun
+              echte token-gebruik naar agent_runs — dit getal is nog geen live gemiddelde daarvan.
+              Raadpleeg de Anthropic- en Resend-dashboards voor exacte cijfers.
             </p>
           </>
         )}

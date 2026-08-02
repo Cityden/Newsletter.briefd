@@ -9,16 +9,14 @@ import { logAgentRun, timer } from './logging'
 // Rechtspraak levert 50-400 tekens; EUR-Lex levert een lege description.
 const MIN_BRONTEKST = 40
 
-// Een item zonder brontekst kán de kwaliteitscontrole niet halen: die verifieert
-// de samenvatting tegen de bron, en zonder bron is er niets te verifiëren. Ze
-// eerder wegfilteren scheelt niet alleen ruis maar ook geld — in een testrun
-// schreef de redactie 54 items waarvan er 3 overleefden, en voor alle 54 is
-// zowel het schrijven als het controleren betaald.
+// Items zonder brontekst gaan hier NIET weg: de redactie-agent haalt die tekst
+// alsnog op, maar alleen voor artikelen die de relevantiedrempel halen. Anders
+// zou je 44 documenten ophalen voor de 12 die je gebruikt.
 //
-// Gevolg: bronnen die alleen titels publiceren (EUR-Lex) dragen niets bij totdat
-// de fetcher hun brontekst kan ophalen. Dat is eerlijker dan items produceren
-// waarvan het model de details moet verzinnen.
-function heeftBruikbareBrontekst(a: Artikel): boolean {
+// Wel geteld, want dit getal is een waarschuwing die de bronwachter niet kan
+// geven: een feed die keurig 25 items teruggeeft maar alleen titels, geldt daar
+// als gezond terwijl hij in de praktijk niets bijdraagt.
+export function heeftBruikbareBrontekst(a: Artikel): boolean {
   return a.samenvatting.trim().length >= MIN_BRONTEKST
 }
 
@@ -29,9 +27,8 @@ export async function scoutAgent(
 ): Promise<Artikel[]> {
   const stop = timer()
   try {
-    const ruw = await fetchArtikelen(bronnen, dagenTerug)
-    const artikelen = ruw.filter(heeftBruikbareBrontekst)
-    const zonderBrontekst = ruw.length - artikelen.length
+    const artikelen = await fetchArtikelen(bronnen, dagenTerug)
+    const zonderBrontekst = artikelen.filter(a => !heeftBruikbareBrontekst(a)).length
 
     await logAgentRun({
       agent: 'scout',
