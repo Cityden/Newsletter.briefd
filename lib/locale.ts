@@ -1,11 +1,5 @@
 export type Locale = 'nl' | 'en'
 
-export function getLocaleFromCookie(): Locale {
-  if (typeof document === 'undefined') return 'nl'
-  const match = document.cookie.match(/(?:^|;\s*)locale=([^;]*)/)
-  return (match?.[1] as Locale) ?? 'nl'
-}
-
 export const teksten = {
   nl: {
     // Metadata
@@ -31,7 +25,7 @@ export const teksten = {
     vakgebieden: ['Finance', 'HR & Arbeidsrecht', 'Fiscaal', 'Marketing', 'Privacy & AVG', 'IT & Cybersecurity', 'Inkoop'],
 
     // Preview card
-    previewLabel: 'Brieft · jouw vakgebied · week 17',
+    previewLabel: (week: number) => `Brieft · jouw vakgebied · week ${week}`,
     previewUpdates: '2 updates',
     previewItems: [
       { impact: 'Hoge impact', type: 'Wetgeving', title: 'Nieuwe meldplicht datalekken — strengere termijn', desc: 'Organisaties moeten datalekken voortaan binnen 48 uur melden bij de toezichthouder. Eerder gold 72 uur. Geldt voor alle sectoren.' },
@@ -69,7 +63,10 @@ export const teksten = {
       { naam: 'Marketing', bronnen: 'Reclame Code Commissie · EDPB · Rechtspraak' },
       { naam: 'Privacy & AVG', bronnen: 'Autoriteit Persoonsgegevens · EDPB · EUR-Lex' },
       { naam: 'IT & Cybersecurity', bronnen: 'NCSC · Digital Trust Center · AP' },
-      { naam: 'Fiscaal', bronnen: 'DNB · AFM · EUR-Lex' },
+      // 'Inkoop' viel hier weg — deze kaart toonde twee keer 'Fiscaal' in plaats
+      // van de 7 vakgebieden hierboven. Bronnen gelijk aan Finance: lib/sources.ts
+      // routeert 'inkoop'/'aanbesteding'/'procurement' naar diezelfde categorie.
+      { naam: 'Inkoop', bronnen: 'AFM · DNB · EUR-Lex' },
       { naam: 'Jouw vakgebied…', bronnen: 'Brieft zoekt automatisch de juiste bronnen', italic: true },
     ],
 
@@ -213,7 +210,7 @@ export const teksten = {
     vakgebieden: ['Finance', 'HR & Employment Law', 'Tax', 'Marketing', 'Privacy & GDPR', 'IT & Cybersecurity', 'Procurement'],
 
     // Preview card
-    previewLabel: 'Brieft · your field · week 17',
+    previewLabel: (week: number) => `Brieft · your field · week ${week}`,
     previewUpdates: '2 updates',
     previewItems: [
       { impact: 'High impact', type: 'Legislation', title: 'New data breach notification rule — stricter deadline', desc: 'Organisations must now report data breaches within 48 hours to the regulator. Previously 72 hours applied. Covers all sectors.' },
@@ -249,7 +246,9 @@ export const teksten = {
       { naam: 'Marketing', bronnen: 'CMA · EDPB · Courts' },
       { naam: 'Privacy & GDPR', bronnen: 'EDPB · Data protection authority · EUR-Lex' },
       { naam: 'IT & Cybersecurity', bronnen: 'NCSC · CISA · EDPB' },
-      { naam: 'Tax', bronnen: 'HMRC · Legislation.gov.uk · EUR-Lex' },
+      // Zie de Nederlandse lijst: 'Procurement' viel weg, deze kaart toonde
+      // 'Tax' twee keer.
+      { naam: 'Procurement', bronnen: 'FCA · Bank of England · EUR-Lex' },
       { naam: 'Your field…', bronnen: 'Brieft automatically finds the right sources', italic: true },
     ],
 
