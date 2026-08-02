@@ -176,7 +176,11 @@ export default function HomeClient({ locale, weekNummer, previewItems }: { local
           <div className="vakgebieden-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
             {t.velden.map((v, i) => (
               <div key={i} className="vak-card" style={{ background: '#0e0e0e', border: '1px solid #1a1a1a', borderRadius: 10, padding: '16px 18px', transition: 'border-color .15s' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: (v as {italic?:boolean}).italic ? '#2a2a2a' : '#d8d8d6', marginBottom: 5, fontStyle: (v as {italic?:boolean}).italic ? 'italic' : 'normal' }}>{v.naam}</div>
+                {/* De "Jouw vakgebied…"-kaart had #2a2a2a — vrijwel zwart op de
+                    #0e0e0e achtergrond van de kaart, dus onleesbaar. Wit i.p.v.
+                    donkergrijs; de cursieve stijl blijft het onderscheid maken
+                    met de echte vakgebieden. */}
+                <div style={{ fontSize: 13, fontWeight: 600, color: (v as {italic?:boolean}).italic ? '#e8e8e6' : '#d8d8d6', marginBottom: 5, fontStyle: (v as {italic?:boolean}).italic ? 'italic' : 'normal' }}>{v.naam}</div>
                 <div style={{ fontSize: 10, color: '#2a2a2a', lineHeight: 1.55, fontStyle: (v as {italic?:boolean}).italic ? 'italic' : 'normal' }}>{v.bronnen}</div>
               </div>
             ))}

@@ -15,7 +15,10 @@ export const teksten = {
     badge: 'AI-gestuurde regelgeving updates',
     heroRegel1: 'Altijd op de hoogte van',
     heroOmschrijving: 'Brieft leest wekelijks alle officiële wetgeving, uitspraken en beleidsupdates. Jij krijgt alleen wat relevant is — samengevat, met bronverwijzingen.',
-    ctaPrimair: 'Gratis aanmelden →',
+    // "Gratis aanmelden" beloofde een gratis product; zodra er een betaalde
+    // versie bijkomt klopt dat niet meer. "Start gratis" belooft alleen een
+    // gratis start, wat ook met een freemium-model overeind blijft.
+    ctaPrimair: 'Start gratis →',
     ctaSecundair: 'Hoe het werkt',
     garanties: ['Geen spam', 'Altijd uitschrijven', 'Alleen officiële bronnen'],
     // ESG bewust niet aangeboden: er bestaat geen werkende officiële feed voor
@@ -73,8 +76,11 @@ export const teksten = {
     // CTA section
     ctaKop: 'Klaar om bij te blijven?',
     ctaSub: 'Meld je aan en ontvang je eerste gepersonaliseerde nieuwsbrief volgende week.',
-    ctaKnop: 'Gratis aanmelden →',
-    ctaGaranties: ['Geen betaalgegevens', 'Direct opzegbaar', 'Gratis'],
+    ctaKnop: 'Start gratis →',
+    // 'Gratis' als losstaande belofte klopt niet meer zodra er een betaalde
+    // versie is; 'Geen verplichtingen' is een garantie die blijft kloppen,
+    // ook in een freemium-model.
+    ctaGaranties: ['Geen betaalgegevens', 'Direct opzegbaar', 'Geen verplichtingen'],
 
     // Footer
     footerTagline: 'Alleen officiële Nederlandse en EU-bronnen',
@@ -202,7 +208,10 @@ export const teksten = {
     badge: 'AI-powered regulatory updates',
     heroRegel1: 'Always on top of',
     heroOmschrijving: 'Brieft reads all official legislation, rulings and policy updates weekly. You only get what\'s relevant — summarised, with source references.',
-    ctaPrimair: 'Sign up for free →',
+    // See the Dutch version for why: 'sign up for free' promises a free
+    // product; 'start for free' only promises a free start, which still
+    // holds once a paid tier exists.
+    ctaPrimair: 'Start for free →',
     ctaSecundair: 'How it works',
     garanties: ['No spam', 'Unsubscribe anytime', 'Official sources only'],
     // Zie de Nederlandse lijst: ESG heeft geen werkende bron en is daarom niet
@@ -255,8 +264,8 @@ export const teksten = {
     // CTA section
     ctaKop: 'Ready to stay informed?',
     ctaSub: 'Sign up and receive your first personalised newsletter next week.',
-    ctaKnop: 'Sign up for free →',
-    ctaGaranties: ['No payment details', 'Cancel anytime', 'Free'],
+    ctaKnop: 'Start for free →',
+    ctaGaranties: ['No payment details', 'Cancel anytime', 'No commitment'],
 
     // Footer
     footerTagline: 'Official government and EU sources only',
