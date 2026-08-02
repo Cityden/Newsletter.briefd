@@ -64,7 +64,11 @@ async function fetchFeed(url: string, bronnaam: string): Promise<Artikel[]> {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Brieft-Nieuwsbrief/1.0 (+https://brieft.online)' },
-      signal: AbortSignal.timeout(10000),
+      // 20s, niet 10s: reclamecode.nl doet er consistent ~11,5 seconde over.
+      // Op 10s viel die bron altijd af, en omdat een mislukte feed alleen wordt
+      // gelogd merkte je daar niets van. Feeds worden parallel opgehaald, dus een
+      // trage bron vertraagt de run niet.
+      signal: AbortSignal.timeout(20000),
     })
     if (!res.ok) {
       console.error(`[fetchFeed] ${bronnaam} HTTP ${res.status} voor ${url}`)

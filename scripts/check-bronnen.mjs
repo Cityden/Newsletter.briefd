@@ -23,14 +23,23 @@ if (bronnen.length === 0) {
 
 const UA = 'Brieft-Nieuwsbrief/1.0 (+https://brieft.online)'
 
+// Moet ruimer zijn dan de timeout in fetchFeed, anders keurt dit script een feed
+// af die in productie nog net binnenkomt.
+const TIMEOUT_MS = 25000
+// Boven deze grens is een feed nog niet kapot, maar wel een risico: fetchFeed
+// breekt af op 20s. Zo zie je het aankomen voordat de bron stil uitvalt.
+const TRAAG_MS = 10000
+
 async function check({ naam, url }) {
+  const start = Date.now()
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(15000) })
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(TIMEOUT_MS) })
+    const duur = Date.now() - start
     if (!res.ok) return { naam, url, ok: false, reden: `HTTP ${res.status}` }
     const xml = await res.text()
     const items = (xml.match(/<item[ >]|<entry[ >]/g) ?? []).length
     return items > 0
-      ? { naam, url, ok: true, items }
+      ? { naam, url, ok: true, items, duur }
       : { naam, url, ok: false, reden: 'geen items in de feed' }
   } catch (err) {
     return { naam, url, ok: false, reden: err.name === 'TimeoutError' ? 'timeout' : err.message }
@@ -40,14 +49,22 @@ async function check({ naam, url }) {
 const resultaten = await Promise.all(bronnen.map(check))
 const kapot = resultaten.filter(r => !r.ok)
 
+const traag = resultaten.filter(r => r.ok && r.duur > TRAAG_MS)
+
 for (const r of resultaten.filter(r => r.ok).sort((a, b) => a.naam.localeCompare(b.naam))) {
-  console.log(`  ok    ${String(r.items).padStart(4)} items  ${r.naam}`)
+  const merk = r.duur > TRAAG_MS ? ' TRAAG' : ''
+  console.log(`  ok    ${String(r.items).padStart(4)} items  ${(r.duur / 1000).toFixed(1)}s${merk.padEnd(6)}  ${r.naam}`)
 }
 for (const r of kapot) {
   console.log(`  KAPOT  ${r.reden.padEnd(14)} ${r.naam} — ${r.url}`)
 }
 
 console.log(`\n${resultaten.length - kapot.length}/${resultaten.length} feeds werken.`)
+
+if (traag.length > 0) {
+  console.log(`${traag.length} feed(s) trager dan ${TRAAG_MS / 1000}s — fetchFeed breekt af op 20s:`)
+  for (const r of traag) console.log(`  ${(r.duur / 1000).toFixed(1)}s  ${r.naam}`)
+}
 
 if (kapot.length > 0) {
   console.error(`\n${kapot.length} feed(s) kapot. Vervang ze of haal ze uit lib/sources.ts.`)

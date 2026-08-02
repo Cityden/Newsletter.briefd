@@ -27,10 +27,20 @@ const BASIS: BronEntry[] = [RECHTSPRAAK, EUR_LEX_L, EUR_LEX_C]
 // ─── NEDERLAND ───────────────────────────────────────────────────────────────
 const AFM_PROF      = { naam: 'AFM (professionals)',             url: 'https://www.afm.nl/nl-nl/rss-feed/nieuws-professionals' }
 const AFM_CONS      = { naam: 'AFM (consumenten)',               url: 'https://www.afm.nl/nl-nl/rss-feed/nieuws-consumenten' }
+const AFM_WAARSCH   = { naam: 'AFM — waarschuwingen',            url: 'https://www.afm.nl/nl-nl/rss-feed/waarschuwingen-afm' }
+// DNB publiceert zijn feed achter interne ID's; die URL is niet te raden en alleen
+// te vinden via dnb.nl/rss-feeds/. Niet "opschonen" naar een mooiere vorm.
+const DNB           = { naam: 'De Nederlandsche Bank',           url: 'https://www.dnb.nl/nl/rss/13039/4612' }
 const AP            = { naam: 'Autoriteit Persoonsgegevens',     url: 'https://www.autoriteitpersoonsgegevens.nl/nl/actueel/rss.xml' }
 const AWVN          = { naam: 'AWVN (arbeidsvoorwaarden)',       url: 'https://www.awvn.nl/feed/' }
 const DTC           = { naam: 'Digital Trust Center',            url: 'https://www.digitaltrustcenter.nl/rss.xml' }
 const NCSC_ADV      = { naam: 'NCSC — beveiligingsadviezen',     url: 'https://advisories.ncsc.nl/rss/advisories' }
+const NCSC_NIEUWS   = { naam: 'NCSC — nieuws',                   url: 'https://feeds.ncsc.nl/nieuws.rss' }
+// Zelfregulering, geen overheid — bewust toegelaten. De Reclame Code Commissie is
+// in Nederland het gezaghebbende orgaan voor reclamerecht, en zonder deze bron
+// heeft het vakgebied Marketing geen enkele inhoudelijke feed. Dit is de enige
+// uitzondering op "alleen wetgevers, toezichthouders en rechtspraak".
+const RECLAME_CODE  = { naam: 'Reclame Code Commissie',          url: 'https://www.reclamecode.nl/uitspraken/resultaten/feed' }
 
 // ─── EUROPESE UNIE ───────────────────────────────────────────────────────────
 const ESMA          = { naam: 'ESMA (financieel toezicht EU)',   url: 'https://www.esma.europa.eu/rss.xml' }
@@ -66,12 +76,12 @@ const met = (...specialisten: BronEntry[]): BronEntry[] => [...specialisten, ...
 
 const BRONNEN_PER_LAND: Record<string, Record<string, BronEntry[]>> = {
   nl: {
-    fiscaal:   met(AFM_PROF),
-    finance:   met(AFM_PROF, AFM_CONS),
+    fiscaal:   met(DNB, AFM_PROF),
+    finance:   met(AFM_PROF, AFM_CONS, DNB, AFM_WAARSCH),
     hr:        met(AWVN, EUOSHA),
     privacy:   met(AP, EDPB),
-    marketing: met(AP),
-    it:        met(DTC, NCSC_ADV, AP),
+    marketing: met(RECLAME_CODE, AFM_WAARSCH),
+    it:        met(DTC, NCSC_NIEUWS, NCSC_ADV, AP),
     techniek:  met(NCSC_ADV, EUOSHA),
     esg:       met(EFSA, EUOSHA),
     zorg:      met(EFSA),
@@ -180,6 +190,10 @@ export const LAND_NAMEN: Record<string, string> = {
 // losse landcodes als '.nl' horen hier NIET thuis — die kan iedereen kopen.
 const TOEGESTANE_DOMEINEN = [
   // Nederland
+  // reclamecode.nl is zelfregulering, geen overheid. Bewust toegelaten door Marij
+  // op 1 augustus 2026: zonder deze bron is het vakgebied Marketing niet te
+  // bedienen. Voeg hier niets aan toe zonder dezelfde afweging expliciet te maken.
+  'reclamecode.nl',
   'overheid.nl', 'rechtspraak.nl', 'afm.nl', 'dnb.nl', 'acm.nl',
   'autoriteitpersoonsgegevens.nl', 'ncsc.nl', 'digitaltrustcenter.nl',
   'belastingdienst.nl', 'rvo.nl', 'nza.nl', 'uwv.nl', 'kvk.nl', 'awvn.nl',
@@ -237,7 +251,9 @@ function bevatTerm(tekst: string, termen: string[]): boolean {
 }
 
 const CATEGORIE_TERMEN: [string, string[]][] = [
-  ['fiscaal',   ['fiscal', 'belasting', 'vpb', 'btw', 'tax']],
+  // 'fisca', niet 'fiscal': het Nederlandse "fiscaal" bevat die string niet
+  // (fisca-a-l). Hierdoor viel iedereen die Fiscaal koos terug op 'algemeen'.
+  ['fiscaal',   ['fisca', 'belasting', 'vpb', 'btw', 'tax']],
   ['finance',   ['financ', 'boekhoud', 'accoun', 'controller', 'cfo', 'treasury', 'audit', 'inkoop', 'aanbesteding', 'procurement', 'supply']],
   ['hr',        ['hr', 'human resource', 'arbeid', 'personeel', 'cao', 'recrut', 'talent', 'verzuim']],
   ['privacy',   ['privacy', 'avg', 'gdpr', 'data protec', 'persoonsgegevens', 'dpo', 'compliance', 'legal', 'juridisch', 'jurist', 'advocaat', 'recht', 'counsel']],
