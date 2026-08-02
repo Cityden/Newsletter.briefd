@@ -10,6 +10,7 @@ export type AgentNaam =
   | 'kwaliteitscontrole'
   | 'personalisatie'
   | 'watchdog'
+  | 'bronwachter'
   | 'herziening'
   | 'groeirapport'
   | 'onboarding'

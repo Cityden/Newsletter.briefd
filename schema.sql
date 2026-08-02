@@ -163,3 +163,11 @@ create index if not exists bronnen_url_idx on bronnen(url);
 -- Zonder deze grant geeft de tabel "permission denied" en valt de code stil terug
 -- op de catalogus in lib/sources.ts. Zie de grants hierboven voor dezelfde les.
 grant select, insert, update, delete on public.bronnen to service_role;
+
+-- Bronwachter toevoegen aan de toegestane agents. Zonder deze regel faalt
+-- logAgentRun voor deze agent stil (alleen console.error) en mist hij in de
+-- audit trail — precies het soort stille fout dat deze agent moet voorkomen.
+alter table agent_runs drop constraint if exists agent_runs_agent_check;
+alter table agent_runs add constraint agent_runs_agent_check
+  check (agent in ('scout', 'classificatie', 'redactie', 'kwaliteitscontrole', 'personalisatie',
+                    'watchdog', 'bronwachter', 'herziening', 'groeirapport', 'onboarding'));

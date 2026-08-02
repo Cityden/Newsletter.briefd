@@ -777,7 +777,7 @@ export default function AdminDashboard() {
             )}
             {agentsData && (() => {
               const runs = agentsData.recenteRuns
-              const alleAgenten = ['scout', 'classificatie', 'redactie', 'kwaliteitscontrole', 'personalisatie', 'watchdog', 'herziening', 'groeirapport', 'onboarding']
+              const alleAgenten = ['scout', 'classificatie', 'redactie', 'kwaliteitscontrole', 'personalisatie', 'watchdog', 'bronwachter', 'herziening', 'groeirapport', 'onboarding']
               const statusKleur = (s: string) => s === 'gelukt' ? c.accent : s === 'geëscaleerd' ? c.waarschuwing : c.fout
               const statusBg = (s: string) => s === 'gelukt' ? c.accentZacht : s === 'geëscaleerd' ? 'rgba(250,204,21,.1)' : 'rgba(248,113,113,.1)'
               const statusBorder = (s: string) => s === 'gelukt' ? c.accentRand : s === 'geëscaleerd' ? 'rgba(250,204,21,.24)' : 'rgba(248,113,113,.24)'
