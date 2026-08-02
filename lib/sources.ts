@@ -21,16 +21,18 @@ import { supabase } from '@/lib/supabase'
 type BronEntry = { naam: string; url: string }
 
 // ─── BASISSET ────────────────────────────────────────────────────────────────
-// Deze drie feeds gaan naar élke abonnee, ongeacht land of vakgebied. Ze zijn
-// domeinbreed: Rechtspraak dekt alle rechtsgebieden, EUR-Lex L bevat alle nieuwe
-// EU-wetgeving (van machinerichtlijn en CE-markering tot financieel toezicht).
-// Hierdoor kan een abonnee nooit zonder bronnen komen te zitten, ook niet als
-// zijn vakgebied geen eigen feed heeft.
+// Twee lagen, niet één: Rechtspraak.nl is Dutch courts in het Nederlands en hoort
+// dus ALLEEN bij 'nl'. Tot 2 augustus 2026 zat hij in één universele BASIS die
+// naar elke abonnee ging — een Amerikaanse of Britse Finance-abonnee kreeg dus
+// Nederlandse rechtszaken in zijn nieuwsbrief. EUR-Lex is wél universeel: EU-recht
+// is beschikbaar in het Engels en relevant voor elk bedrijf met EU-blootstelling,
+// dus die blijft de garantie dat niemand zonder bronnen komt te zitten.
 const RECHTSPRAAK   = { naam: 'Rechtspraak.nl',                  url: 'https://uitspraken.rechtspraak.nl/rss' }
 const EUR_LEX_L     = { naam: 'EUR-Lex — nieuwe EU-wetgeving',   url: 'https://eur-lex.europa.eu/EN/display-feed.rss?rssId=165' }
 const EUR_LEX_C     = { naam: 'EUR-Lex — mededelingen',          url: 'https://eur-lex.europa.eu/EN/display-feed.rss?rssId=166' }
 
-const BASIS: BronEntry[] = [RECHTSPRAAK, EUR_LEX_L, EUR_LEX_C]
+const EU_BASIS: BronEntry[] = [EUR_LEX_L, EUR_LEX_C]
+const NL_BASIS: BronEntry[] = [RECHTSPRAAK, ...EU_BASIS]
 
 // ─── NEDERLAND ───────────────────────────────────────────────────────────────
 const AFM_PROF      = { naam: 'AFM (professionals)',             url: 'https://www.afm.nl/nl-nl/rss-feed/nieuws-professionals' }
@@ -42,6 +44,9 @@ const DNB           = { naam: 'De Nederlandsche Bank',           url: 'https://w
 const AP            = { naam: 'Autoriteit Persoonsgegevens',     url: 'https://www.autoriteitpersoonsgegevens.nl/nl/actueel/rss.xml' }
 const AWVN          = { naam: 'AWVN (arbeidsvoorwaarden)',       url: 'https://www.awvn.nl/feed/' }
 const DTC           = { naam: 'Digital Trust Center',            url: 'https://www.digitaltrustcenter.nl/rss.xml' }
+// Nederlandstalig — alleen voor de nl-categorie. Deze feed lekte eerder ook naar
+// eu/uk/de/internationaal, waardoor Engelssprekende abonnees Nederlandstalige
+// beveiligingsadviezen kregen. UK_NCSC hieronder vervangt hem daar.
 const NCSC_ADV      = { naam: 'NCSC — beveiligingsadviezen',     url: 'https://advisories.ncsc.nl/rss/advisories' }
 const NCSC_NIEUWS   = { naam: 'NCSC — nieuws',                   url: 'https://feeds.ncsc.nl/nieuws.rss' }
 // Zelfregulering, geen overheid — bewust toegelaten. De Reclame Code Commissie is
@@ -65,6 +70,7 @@ const UK_CMA             = { naam: 'CMA (UK mededinging)',            url: 'http
 const UK_PRA             = { naam: 'Bank of England / PRA',           url: 'https://www.bankofengland.co.uk/rss/publications' }
 const UK_COMPANIES_HOUSE = { naam: 'Companies House (UK)',            url: 'https://www.gov.uk/government/organisations/companies-house.atom' }
 const UK_ENV_AGENCY      = { naam: 'Environment Agency (UK)',         url: 'https://www.gov.uk/government/organisations/environment-agency.atom' }
+const UK_NCSC            = { naam: 'NCSC UK — cyber security',        url: 'https://www.ncsc.gov.uk/api/1/services/v1/all-rss-feed.xml' }
 
 // ─── VERENIGDE STATEN ────────────────────────────────────────────────────────
 const SEC_US        = { naam: 'SEC (US financieel toezicht)',    url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=&dateb=&owner=include&count=20&output=atom' }
@@ -78,25 +84,28 @@ const DE_DSK        = { naam: 'Datenschutzkonferenz (DE)',       url: 'https://w
 const IT_GOVERNO    = { naam: 'Governo Italiano',                url: 'https://www.governo.it/it/rss.xml' }
 
 // ─── BRONNEN PER LAND × VAKGEBIED ────────────────────────────────────────────
-// Elke categorie = specialistische feeds + de basisset. De basisset staat achteraan
-// zodat de specialistische bronnen bovenaan de scout-resultaten komen.
-const met = (...specialisten: BronEntry[]): BronEntry[] => [...specialisten, ...BASIS]
+// Elke categorie = specialistische feeds + een basisset. De basisset staat
+// achteraan zodat de specialistische bronnen bovenaan de scout-resultaten komen.
+// metNL() gebruikt NL_BASIS (incl. Rechtspraak.nl), met() gebruikt EU_BASIS
+// (alleen EUR-Lex) voor elk ander land — zie de toelichting bij NL_BASIS hierboven.
+const metNL = (...specialisten: BronEntry[]): BronEntry[] => [...specialisten, ...NL_BASIS]
+const met = (...specialisten: BronEntry[]): BronEntry[] => [...specialisten, ...EU_BASIS]
 
 const BRONNEN_PER_LAND: Record<string, Record<string, BronEntry[]>> = {
   nl: {
-    fiscaal:   met(DNB, AFM_PROF),
-    finance:   met(AFM_PROF, AFM_CONS, DNB, AFM_WAARSCH),
-    hr:        met(AWVN, EUOSHA),
-    privacy:   met(AP, EDPB),
+    fiscaal:   metNL(DNB, AFM_PROF),
+    finance:   metNL(AFM_PROF, AFM_CONS, DNB, AFM_WAARSCH),
+    hr:        metNL(AWVN, EUOSHA),
+    privacy:   metNL(AP, EDPB),
     // Geen AFM-waarschuwingen hier: die items hebben als titel alleen een
     // bedrijfsnaam ("Capitvo Inc."), waardoor de classificatie ze bij gebrek aan
     // context hoog scoorde voor marketing terwijl ze over vergunningen gaan.
-    marketing: met(RECLAME_CODE, EDPB),
-    it:        met(DTC, NCSC_NIEUWS, NCSC_ADV, AP),
-    techniek:  met(NCSC_ADV, EUOSHA),
-    esg:       met(EFSA, EUOSHA),
-    zorg:      met(EFSA),
-    algemeen:  met(),
+    marketing: metNL(RECLAME_CODE, EDPB),
+    it:        metNL(DTC, NCSC_NIEUWS, NCSC_ADV, AP),
+    techniek:  metNL(NCSC_ADV, EUOSHA),
+    esg:       metNL(EFSA, EUOSHA),
+    zorg:      metNL(EFSA),
+    algemeen:  metNL(),
   },
   eu: {
     fiscaal:   met(ESMA),
@@ -104,8 +113,8 @@ const BRONNEN_PER_LAND: Record<string, Record<string, BronEntry[]>> = {
     hr:        met(EUOSHA),
     privacy:   met(EDPB),
     marketing: met(EDPB),
-    it:        met(EDPB, NCSC_ADV),
-    techniek:  met(EUOSHA, NCSC_ADV),
+    it:        met(EDPB, UK_NCSC),
+    techniek:  met(EUOSHA, UK_NCSC),
     esg:       met(EFSA, EUOSHA),
     zorg:      met(EFSA),
     algemeen:  met(),
@@ -116,7 +125,7 @@ const BRONNEN_PER_LAND: Record<string, Record<string, BronEntry[]>> = {
     hr:        met(UK_LEGISLATION, EUOSHA),
     privacy:   met(UK_LEGISLATION, EDPB),
     marketing: met(UK_CMA, UK_LEGISLATION),
-    it:        met(UK_LEGISLATION, NCSC_ADV),
+    it:        met(UK_LEGISLATION, UK_NCSC),
     techniek:  met(UK_LEGISLATION, UK_ENV_AGENCY),
     esg:       met(UK_ENV_AGENCY, UK_LEGISLATION),
     zorg:      met(UK_LEGISLATION),
@@ -152,8 +161,8 @@ const BRONNEN_PER_LAND: Record<string, Record<string, BronEntry[]>> = {
     hr:        met(EUOSHA),
     privacy:   met(DE_DSK, EDPB),
     marketing: met(DE_DSK),
-    it:        met(DE_DSK, NCSC_ADV),
-    techniek:  met(EUOSHA, NCSC_ADV),
+    it:        met(DE_DSK, UK_NCSC),
+    techniek:  met(EUOSHA, UK_NCSC),
     esg:       met(EFSA, EUOSHA),
     zorg:      met(EFSA),
     algemeen:  met(DE_DSK),
@@ -170,13 +179,16 @@ const BRONNEN_PER_LAND: Record<string, Record<string, BronEntry[]>> = {
     zorg:      met(IT_GOVERNO, EFSA),
     algemeen:  met(IT_GOVERNO),
   },
+  // De vangnet-categorie voor elk land zonder eigen matrix (of expliciet gekozen
+  // als "internationaal"). Standaardtaal hier is Engels, dus uitsluitend
+  // Engelstalige bronnen — geen Rechtspraak.nl, geen Nederlandse NCSC-feed.
   internationaal: {
     fiscaal:   met(GOVINFO_US, UK_HMRC),
     finance:   met(ESMA, EBA, SEC_US, UK_FCA),
     hr:        met(EUOSHA),
     privacy:   met(EDPB, CISA_US),
     marketing: met(UK_CMA),
-    it:        met(CISA_US, NCSC_ADV, EDPB),
+    it:        met(CISA_US, UK_NCSC, EDPB),
     techniek:  met(EUOSHA, CISA_US),
     esg:       met(EFSA, UK_ENV_AGENCY),
     zorg:      met(EFSA),
@@ -287,8 +299,13 @@ async function bronnenUitDatabase(land: string, categorie: string): Promise<Bron
       supabase.from('bronnen').select('naam, url')
         .eq('status', 'actief').eq('is_basis', false)
         .eq('land', land).eq('categorie', categorie),
+      // Basisrijen zijn getagd met 'alle' (universeel, bv. EUR-Lex) of met het
+      // specifieke land waar ze wél bij horen (Rechtspraak.nl -> alleen 'nl').
+      // Zonder deze .in()-filter kreeg elke abonnee wereldwijd Nederlandse
+      // rechtszaken in zijn nieuwsbrief — precies de bug die in de code-catalogus
+      // is opgelost met NL_BASIS/EU_BASIS.
       supabase.from('bronnen').select('naam, url')
-        .eq('status', 'actief').eq('is_basis', true),
+        .eq('status', 'actief').eq('is_basis', true).in('land', [land, 'alle']),
     ])
 
     if (specialisten.error || basis.error) {
