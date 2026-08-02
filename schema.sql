@@ -124,3 +124,42 @@ create index on concept_nieuwsbrieven(aangemaakt_op);
 grant select, insert, update, delete on public.agent_runs to service_role;
 grant select, insert, update, delete on public.gepubliceerde_items to service_role;
 grant select, insert, update, delete on public.concept_nieuwsbrieven to service_role;
+
+-- ── Bronnencatalogus ─────────────────────────────────────────────────────
+-- De bronnenlijst stond in lib/sources.ts, waardoor elke wijziging een deploy
+-- vereiste en agents er niets aan konden veranderen. Hier staat hij als data,
+-- met per bron zijn gezondheid, zodat de watchdog een dode feed in quarantaine
+-- kan zetten en een verkenner-agent een nieuwe kan voorstellen.
+--
+-- Bewust gedenormaliseerd: één rij per (url, land, categorie). Een bron die in
+-- vijf categorieën zit, staat er vijf keer in. Dat houdt de query triviaal, en
+-- de gezondheidsvelden worden per url in één keer bijgewerkt.
+create table if not exists bronnen (
+  id uuid primary key default gen_random_uuid(),
+  naam text not null,
+  url text not null,
+  land text not null,                    -- nl, eu, uk, us, be, de, it_land, internationaal
+  categorie text not null,               -- fiscaal, finance, hr, privacy, marketing, it, techniek, esg, zorg, algemeen
+  is_basis boolean not null default false, -- basisset: gaat naar elke abonnee, ongeacht land/categorie
+  status text not null default 'actief'
+    check (status in ('actief', 'quarantaine', 'voorgesteld', 'afgewezen')),
+  herkomst text not null default 'catalogus'
+    check (herkomst in ('catalogus', 'agent', 'handmatig')),
+  notitie text,                          -- bv. waarom een niet-overheidsbron is toegelaten
+  laatst_gecontroleerd_op timestamptz,
+  laatst_gelukt_op timestamptz,
+  laatste_aantal_artikelen integer,
+  opeenvolgende_fouten integer not null default 0,
+  aangemaakt_op timestamptz default now(),
+  unique (url, land, categorie)
+);
+
+alter table bronnen enable row level security;
+
+create index if not exists bronnen_land_categorie_idx on bronnen(land, categorie) where status = 'actief';
+create index if not exists bronnen_basis_idx on bronnen(is_basis) where status = 'actief';
+create index if not exists bronnen_url_idx on bronnen(url);
+
+-- Zonder deze grant geeft de tabel "permission denied" en valt de code stil terug
+-- op de catalogus in lib/sources.ts. Zie de grants hierboven voor dezelfde les.
+grant select, insert, update, delete on public.bronnen to service_role;

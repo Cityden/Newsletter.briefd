@@ -1,4 +1,12 @@
+import { supabase } from '@/lib/supabase'
+
 // Bronnenlijst — officiële RSS-feeds per land en vakgebied.
+//
+// Deze lijst is sinds augustus 2026 de FALLBACK. De werkelijke catalogus staat
+// in de tabel `bronnen` in Supabase, zodat de watchdog een dode feed in
+// quarantaine kan zetten en bronnen kunnen worden toegevoegd zonder deploy.
+// Deze code-versie blijft bestaan als vangnet: is de tabel leeg of onbereikbaar,
+// dan draait alles hier gewoon op door. Houd hem daarom actueel.
 //
 // BELANGRIJK: elke URL in dit bestand is gecontroleerd met `npm run check:bronnen`
 // (scripts/check-bronnen.mjs). Voeg nooit een feed toe die je niet zelf hebt zien
@@ -269,6 +277,34 @@ const CATEGORIE_TERMEN: [string, string[]][] = [
   ['zorg',      ['zorg', 'medisch', 'gezondheid', 'pharma', 'care', 'health', 'farma']],
 ]
 
+// Haalt de bronnen voor één land × categorie uit de database, plus de basisset.
+// Geeft null terug wanneer de tabel niet bestaat, onbereikbaar is of niets
+// oplevert — dan valt getBronnen terug op de catalogus in dit bestand. Dat
+// onderscheid is bewust: een lege tabel mag nooit een lege nieuwsbrief opleveren.
+async function bronnenUitDatabase(land: string, categorie: string): Promise<BronEntry[] | null> {
+  try {
+    const [specialisten, basis] = await Promise.all([
+      supabase.from('bronnen').select('naam, url')
+        .eq('status', 'actief').eq('is_basis', false)
+        .eq('land', land).eq('categorie', categorie),
+      supabase.from('bronnen').select('naam, url')
+        .eq('status', 'actief').eq('is_basis', true),
+    ])
+
+    if (specialisten.error || basis.error) {
+      console.error('[bronnen] databaselezing mislukt, terugval op de code-catalogus:',
+        specialisten.error?.message ?? basis.error?.message)
+      return null
+    }
+
+    const gecombineerd = dedupliceer([...(specialisten.data ?? []), ...(basis.data ?? [])])
+    return gecombineerd.length > 0 ? gecombineerd : null
+  } catch (err) {
+    console.error('[bronnen] databaselezing wierp een fout, terugval op de code-catalogus:', err)
+    return null
+  }
+}
+
 // Controleert of een feed-URL echt bestaat en items bevat. Bewust kort van
 // timeout: dit draait tijdens een verzendrun en mag die niet ophouden.
 async function feedLevertArtikelen(url: string): Promise<boolean> {
@@ -336,18 +372,27 @@ export async function getBronnen(
   const extraOnderwerpen = opties?.extraOnderwerpen?.trim() ?? ''
   const branche = opties?.branche?.trim() ?? ''
 
-  // Nationale bronnen ophalen
-  const nationaleBronnen = BRONNEN_PER_LAND[landSleutel]?.[vakSleutel]
-    ?? BRONNEN_PER_LAND[landSleutel]?.['algemeen']
-    ?? BRONNEN_PER_LAND['nl']['algemeen']
+  // Eerst de database; die is leidend zodra hij gevuld is, zodat een agent of
+  // handmatige correctie meteen effect heeft zonder deploy. Is de tabel er nog
+  // niet, leeg, of onbereikbaar, dan valt alles terug op de catalogus hieronder.
+  const uitDatabase = await bronnenUitDatabase(landSleutel, vakSleutel)
 
-  // Automatisch 2 EU-bronnen toevoegen voor niet-EU/internationaal landen
-  const voegEuToe = !['eu', 'internationaal'].includes(landSleutel)
-  const euAanvulling = voegEuToe
-    ? (BRONNEN_PER_LAND['eu'][vakSleutel] ?? BRONNEN_PER_LAND['eu']['algemeen']).slice(0, 2)
-    : []
+  let basisBronnen: BronEntry[]
+  if (uitDatabase) {
+    basisBronnen = uitDatabase
+  } else {
+    const nationaleBronnen = BRONNEN_PER_LAND[landSleutel]?.[vakSleutel]
+      ?? BRONNEN_PER_LAND[landSleutel]?.['algemeen']
+      ?? BRONNEN_PER_LAND['nl']['algemeen']
 
-  const basisBronnen = dedupliceer([...nationaleBronnen, ...euAanvulling])
+    // Automatisch 2 EU-bronnen toevoegen voor niet-EU/internationaal landen
+    const voegEuToe = !['eu', 'internationaal'].includes(landSleutel)
+    const euAanvulling = voegEuToe
+      ? (BRONNEN_PER_LAND['eu'][vakSleutel] ?? BRONNEN_PER_LAND['eu']['algemeen']).slice(0, 2)
+      : []
+
+    basisBronnen = dedupliceer([...nationaleBronnen, ...euAanvulling])
+  }
 
   // Supplementaire bronnen via Claude op basis van extra interesses
   if (extraOnderwerpen) {
