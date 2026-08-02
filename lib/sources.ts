@@ -81,7 +81,23 @@ const CISA_US       = { naam: 'CISA (US cybersecurity)',         url: 'https://w
 // ─── OVERIGE LANDEN ──────────────────────────────────────────────────────────
 const BE_OVERHEID   = { naam: 'Belgische overheid',              url: 'https://www.belgium.be/nl/rss.xml' }
 const DE_DSK        = { naam: 'Datenschutzkonferenz (DE)',       url: 'https://www.datenschutzkonferenz-online.de/rss.xml' }
+// BaFin (financieel toezicht) en BSI (cybersecurity) — vervangen UK_NCSC als
+// noodgreep in de Duitse categorieën: dit zijn Duitse instellingen zelf.
+const DE_BAFIN      = { naam: 'BaFin (DE financieel toezicht)',  url: 'https://www.bafin.de/DE/service/rss/_function/rssnewsfeed.xml?nn=150166' }
+const DE_BSI        = { naam: 'BSI (DE cybersecurity)',          url: 'https://www.bsi.bund.de/SiteGlobals/Functions/RSSFeed/RSSNewsfeed/RSSNewsfeed_Presse_Veranstaltungen.xml' }
 const IT_GOVERNO    = { naam: 'Governo Italiano',                url: 'https://www.governo.it/it/rss.xml' }
+
+// ─── FRANKRIJK ───────────────────────────────────────────────────────────────
+// Légifrance zelf heeft geen RSS meer (bevestigd nagezocht, alleen nog een
+// niet-officiële derde-partij-tool bestaat daarvoor — niet toegelaten, geen
+// overheidsbron). Deze vier zijn wél primaire, officiële bronnen.
+const FR_CNIL       = { naam: 'CNIL (FR privacytoezicht)',       url: 'https://cnil.fr/fr/rss.xml' }
+// Feed-ID 21 ("Toutes les actualités") bleek na herhaald testen consistent 403 te
+// geven terwijl 22-31 stabiel werken — waarschijnlijk bot-bescherming specifiek op
+// die ene ID. 31 is regelgeving zelf, het beste passend bij een regelgevingsnieuwsbrief.
+const FR_AMF        = { naam: 'AMF (FR financieel toezicht)',    url: 'https://www.amf-france.org/fr/flux-rss/display/31' }
+const FR_ANSSI      = { naam: 'CERT-FR (FR cybersecurity)',      url: 'https://www.cert.ssi.gouv.fr/avis/feed/' }
+const FR_ECONOMIE   = { naam: 'Ministère de l’Économie (FR)', url: 'https://www.economie.gouv.fr/rss/toutesactualites' }
 
 // ─── BRONNEN PER LAND × VAKGEBIED ────────────────────────────────────────────
 // Elke categorie = specialistische feeds + een basisset. De basisset staat
@@ -143,6 +159,22 @@ const BRONNEN_PER_LAND: Record<string, Record<string, BronEntry[]>> = {
     zorg:      met(GOVINFO_US),
     algemeen:  met(GOVINFO_US),
   },
+  // Stond hiervoor helemaal niet in deze matrix, terwijl normaliseerLand 'fr'
+  // wél herkent — een Franse abonnee viel terug op EU_BASIS (alleen EUR-Lex,
+  // geen Franse bron) of erger, op Nederlandse content. Zie de vraag die dit
+  // blootlegde: wat gebeurt er als een advertentie een Franse abonnee oplevert.
+  fr: {
+    fiscaal:   met(FR_ECONOMIE),
+    finance:   met(FR_AMF, FR_ECONOMIE),
+    hr:        met(EUOSHA),
+    privacy:   met(FR_CNIL, EDPB),
+    marketing: met(FR_CNIL),
+    it:        met(FR_ANSSI),
+    techniek:  met(FR_ANSSI, EUOSHA),
+    esg:       met(EFSA, EUOSHA),
+    zorg:      met(EFSA),
+    algemeen:  met(FR_ECONOMIE, FR_CNIL),
+  },
   be: {
     fiscaal:   met(BE_OVERHEID),
     finance:   met(BE_OVERHEID, ESMA, EBA),
@@ -157,15 +189,15 @@ const BRONNEN_PER_LAND: Record<string, Record<string, BronEntry[]>> = {
   },
   de: {
     fiscaal:   met(),
-    finance:   met(ESMA, EBA),
+    finance:   met(DE_BAFIN, ESMA, EBA),
     hr:        met(EUOSHA),
     privacy:   met(DE_DSK, EDPB),
     marketing: met(DE_DSK),
-    it:        met(DE_DSK, UK_NCSC),
-    techniek:  met(EUOSHA, UK_NCSC),
+    it:        met(DE_BSI, DE_DSK),
+    techniek:  met(DE_BSI, EUOSHA),
     esg:       met(EFSA, EUOSHA),
     zorg:      met(EFSA),
-    algemeen:  met(DE_DSK),
+    algemeen:  met(DE_BAFIN, DE_DSK),
   },
   it_land: {
     fiscaal:   met(IT_GOVERNO),
@@ -398,9 +430,14 @@ export async function getBronnen(
   if (uitDatabase) {
     basisBronnen = uitDatabase
   } else {
+    // Kent normaliseerLand een land wél (bv. 'fr', 'es'), maar heeft
+    // BRONNEN_PER_LAND daar nog geen sleutel voor, dan gold hier vroeger
+    // BRONNEN_PER_LAND['nl']['algemeen'] als vangnet — en dat is NL_BASIS, dus
+    // Rechtspraak.nl in het Nederlands voor een Franse of Spaanse abonnee. Het
+    // vangnet moet universeel zijn (EU_BASIS), nooit Nederlands.
     const nationaleBronnen = BRONNEN_PER_LAND[landSleutel]?.[vakSleutel]
       ?? BRONNEN_PER_LAND[landSleutel]?.['algemeen']
-      ?? BRONNEN_PER_LAND['nl']['algemeen']
+      ?? EU_BASIS
 
     // Automatisch 2 EU-bronnen toevoegen voor niet-EU/internationaal landen
     const voegEuToe = !['eu', 'internationaal'].includes(landSleutel)
