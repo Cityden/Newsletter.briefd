@@ -24,7 +24,11 @@ export const teksten = {
     ctaPrimair: 'Gratis aanmelden →',
     ctaSecundair: 'Hoe het werkt',
     garanties: ['Geen spam', 'Altijd uitschrijven', 'Alleen officiële bronnen'],
-    vakgebieden: ['Finance', 'HR & Arbeidsrecht', 'Fiscaal', 'Marketing', 'Privacy & AVG', 'IT & Cybersecurity', 'ESG', 'Inkoop'],
+    // ESG bewust niet aangeboden: er bestaat geen werkende officiële feed voor
+    // duurzaamheidsrapportage (EEA, EFRAG en DG Environment hebben er geen), dus
+    // een ESG-abonnee zou alleen de basisset krijgen. Zet het pas terug zodra er
+    // een echte bron is — zie de ESG-categorie in lib/sources.ts.
+    vakgebieden: ['Finance', 'HR & Arbeidsrecht', 'Fiscaal', 'Marketing', 'Privacy & AVG', 'IT & Cybersecurity', 'Inkoop'],
 
     // Preview card
     previewLabel: 'Brieft · jouw vakgebied · week 17',
@@ -57,12 +61,15 @@ export const teksten = {
     vakgebiedenSub: 'Staat jouw vakgebied er niet bij? Typ het gewoon in — Brieft bepaalt zelf welke bronnen relevant zijn.',
     velden: [
       { naam: 'Fiscaal', bronnen: 'Belastingdienst · Staatscourant · Rechtspraak' },
+      // Noem hier alleen bronnen die echt in lib/sources.ts staan en werken.
+      // Dit stond vol met SZW, UWV, ACM en RVO — allemaal feeds die niet meer
+      // bestaan. Dat is een belofte aan bezoekers die je niet waarmaakt.
       { naam: 'Finance', bronnen: 'AFM · DNB · EUR-Lex' },
-      { naam: 'HR & Arbeidsrecht', bronnen: 'Rechtspraak · SZW · UWV' },
-      { naam: 'Marketing', bronnen: 'ACM · AP · Reclame Code Commissie' },
-      { naam: 'Privacy & AVG', bronnen: 'Autoriteit Persoonsgegevens · EUR-Lex' },
-      { naam: 'IT & Cybersecurity', bronnen: 'NCSC · AP · ACM' },
-      { naam: 'ESG & Duurzaamheid', bronnen: 'AFM · RVO · EUR-Lex' },
+      { naam: 'HR & Arbeidsrecht', bronnen: 'AWVN · EU-OSHA · Rechtspraak' },
+      { naam: 'Marketing', bronnen: 'Reclame Code Commissie · EDPB · Rechtspraak' },
+      { naam: 'Privacy & AVG', bronnen: 'Autoriteit Persoonsgegevens · EDPB · EUR-Lex' },
+      { naam: 'IT & Cybersecurity', bronnen: 'NCSC · Digital Trust Center · AP' },
+      { naam: 'Fiscaal', bronnen: 'DNB · AFM · EUR-Lex' },
       { naam: 'Jouw vakgebied…', bronnen: 'Brieft zoekt automatisch de juiste bronnen', italic: true },
     ],
 
@@ -201,7 +208,9 @@ export const teksten = {
     ctaPrimair: 'Sign up for free →',
     ctaSecundair: 'How it works',
     garanties: ['No spam', 'Unsubscribe anytime', 'Official sources only'],
-    vakgebieden: ['Finance', 'HR & Employment Law', 'Tax', 'Marketing', 'Privacy & GDPR', 'IT & Cybersecurity', 'ESG', 'Procurement'],
+    // Zie de Nederlandse lijst: ESG heeft geen werkende bron en is daarom niet
+    // aangeboden.
+    vakgebieden: ['Finance', 'HR & Employment Law', 'Tax', 'Marketing', 'Privacy & GDPR', 'IT & Cybersecurity', 'Procurement'],
 
     // Preview card
     previewLabel: 'Brieft · your field · week 17',
@@ -234,12 +243,13 @@ export const teksten = {
     vakgebiedenSub: 'Don\'t see your field? Just type it in — Brieft automatically finds the right sources.',
     velden: [
       { naam: 'Tax', bronnen: 'Tax authority · Official gazette · Courts' },
-      { naam: 'Finance', bronnen: 'FCA · ECB · EUR-Lex' },
-      { naam: 'HR & Employment Law', bronnen: 'Courts · Labour ministry · OECD' },
-      { naam: 'Marketing', bronnen: 'Competition authority · Courts' },
-      { naam: 'Privacy & GDPR', bronnen: 'Data protection authority · EUR-Lex' },
-      { naam: 'IT & Cybersecurity', bronnen: 'ENISA · NCSC · Courts' },
-      { naam: 'ESG & Sustainability', bronnen: 'EBA · RVO · EUR-Lex' },
+      // Zie de Nederlandse lijst: alleen bronnen die echt werken.
+      { naam: 'Finance', bronnen: 'FCA · Bank of England · EUR-Lex' },
+      { naam: 'HR & Employment Law', bronnen: 'EU-OSHA · Courts · EUR-Lex' },
+      { naam: 'Marketing', bronnen: 'CMA · EDPB · Courts' },
+      { naam: 'Privacy & GDPR', bronnen: 'EDPB · Data protection authority · EUR-Lex' },
+      { naam: 'IT & Cybersecurity', bronnen: 'NCSC · CISA · EDPB' },
+      { naam: 'Tax', bronnen: 'HMRC · Legislation.gov.uk · EUR-Lex' },
       { naam: 'Your field…', bronnen: 'Brieft automatically finds the right sources', italic: true },
     ],
 

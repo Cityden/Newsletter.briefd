@@ -80,7 +80,10 @@ const BRONNEN_PER_LAND: Record<string, Record<string, BronEntry[]>> = {
     finance:   met(AFM_PROF, AFM_CONS, DNB, AFM_WAARSCH),
     hr:        met(AWVN, EUOSHA),
     privacy:   met(AP, EDPB),
-    marketing: met(RECLAME_CODE, AFM_WAARSCH),
+    // Geen AFM-waarschuwingen hier: die items hebben als titel alleen een
+    // bedrijfsnaam ("Capitvo Inc."), waardoor de classificatie ze bij gebrek aan
+    // context hoog scoorde voor marketing terwijl ze over vergunningen gaan.
+    marketing: met(RECLAME_CODE, EDPB),
     it:        met(DTC, NCSC_NIEUWS, NCSC_ADV, AP),
     techniek:  met(NCSC_ADV, EUOSHA),
     esg:       met(EFSA, EUOSHA),
