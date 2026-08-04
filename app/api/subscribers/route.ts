@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { supabase } from '@/lib/supabase'
-import { getBronnen } from '@/lib/sources'
+import { getBronnen, heeftLandSpecifiekeBronnen } from '@/lib/sources'
+import { stuurAlertMail } from '@/lib/agents/alert'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
@@ -51,6 +52,26 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('getBronnen mislukt:', err)
     // Aanmelding gaat door; bronnen worden bij volgende cron regenereerd
+  }
+
+  // Waarschuwing, geen blokkade: deze abonnee krijgt zijn (dunne) nieuwsbrief
+  // gewoon zoals beloofd. De mail is puur om vóór de volgende verzending
+  // landspecifieke bronnen te kunnen zoeken — zie het Frankrijk/Duitsland-werk
+  // van 2 augustus 2026, dat exact hierdoor werd getriggerd.
+  try {
+    if (!(await heeftLandSpecifiekeBronnen(vakgebied, { branche: branche || undefined, land: land || 'NL' }))) {
+      await stuurAlertMail(
+        `Nieuwe abonnee zonder eigen bronnen: ${land || 'NL'} / ${vakgebied}`,
+        [
+          `<strong>${escapeHtml(naam)}</strong> (${escapeHtml(email)}) meldde zich aan voor <strong>${escapeHtml(vakgebied)}</strong> uit <strong>${escapeHtml(land || 'NL')}</strong>.`,
+          `Voor deze combinatie bestaan nog geen specialistische bronnen — deze abonnee krijgt voorlopig alleen de universele basisset (EUR-Lex${(!land || land === 'NL') ? ' + Rechtspraak.nl' : ''}).`,
+          `Zoek en verifieer bronnen (npm run check:bronnen), voeg ze toe aan lib/sources.ts en draai npm run seed:bronnen -- --doe vóór de volgende verzendrun.`,
+        ]
+      )
+    }
+  } catch (err) {
+    console.error('[subscribers] dekkingscheck/alert mislukt:', err)
+    // Aanmelding mag hier nooit op stuklopen
   }
 
   const { data, error } = await supabase

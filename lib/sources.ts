@@ -354,6 +354,44 @@ async function bronnenUitDatabase(land: string, categorie: string): Promise<Bron
   }
 }
 
+// Bepaalt of een land/vakgebied al ECHTE specialistische bronnen heeft, los van
+// de universele basisset (EUR-Lex, of voor 'nl' ook Rechtspraak). Gebruikt bij
+// aanmelding om Marij te waarschuwen zodra iemand uit een nog niet gedekt land
+// of vakgebied komt — vóór 2 augustus 2026 kreeg zo'n abonnee stilletjes alleen
+// de basisset, zonder dat iemand het merkte totdat de vraag zich toevallig
+// voordeed (zie het Frankrijk/Duitsland-onderzoek van diezelfde dag).
+export async function heeftLandSpecifiekeBronnen(
+  vakgebied: string,
+  opties?: { branche?: string; land?: string }
+): Promise<boolean> {
+  const landSleutel = normaliseerLand(opties?.land)
+  const vakUitVakgebied = normaliseerVakgebied(vakgebied)
+  const vakSleutel = vakUitVakgebied !== 'algemeen'
+    ? vakUitVakgebied
+    : normaliseerVakgebied(opties?.branche ?? '')
+
+  // Geen 'algemeen'-fallback hier: bronnenUitDatabase queryt ook alleen de exacte
+  // (land, categorie) — een abonnee met een categorie zonder specialisten krijgt
+  // dus echt alleen de basisset, ook al heeft 'algemeen' voor dat land wel iets.
+  // Deze functie moet precies rapporteren wat getBronnen ook echt teruggeeft.
+  try {
+    const { count, error } = await supabase.from('bronnen').select('id', { count: 'exact', head: true })
+      .eq('status', 'actief').eq('is_basis', false)
+      .eq('land', landSleutel).eq('categorie', vakSleutel)
+    if (!error) return (count ?? 0) > 0
+  } catch (err) {
+    console.error('[bronnen] dekkingscheck via database mislukt, terugval op de code-catalogus:', err)
+  }
+
+  // Code-fallback: BRONNEN_PER_LAND[land][cat] is altijd specialisten + de volledige
+  // basisset erachteraan geplakt (via met()/metNL(), zonder dedup op dit niveau) —
+  // dus alles boven de kale basisgrootte is een echte specialist.
+  const lijst = BRONNEN_PER_LAND[landSleutel]?.[vakSleutel]
+  if (!lijst) return false
+  const basisGrootte = landSleutel === 'nl' ? NL_BASIS.length : EU_BASIS.length
+  return lijst.length > basisGrootte
+}
+
 // Controleert of een feed-URL echt bestaat en items bevat. Bewust kort van
 // timeout: dit draait tijdens een verzendrun en mag die niet ophouden.
 async function feedLevertArtikelen(url: string): Promise<boolean> {
@@ -394,7 +432,11 @@ function normaliseerLand(land?: string): string {
   // Overige EU-landen (LU, AT, CH, PL, DK, SE, FI, IE) → EU-bronnen
   const euLanden = ['lu', 'at', 'ch', 'pl', 'dk', 'se', 'fi', 'ie']
   if (euLanden.includes(lower)) return 'eu'
-  return 'nl'
+  // Was hier 'nl': elk land dat niet in bovenstaande lijst voorkomt (Portugal,
+  // Griekenland, Tsjechië, Roemenië — de helft van de EU staat hier niet met
+  // name genoemd) kreeg zo alsnog Nederlandse content. 'internationaal' is de
+  // bucket die daar wél voor bedoeld is: breed, officieel, niet NL-specifiek.
+  return 'internationaal'
 }
 
 function dedupliceer(bronnen: BronEntry[]): BronEntry[] {
